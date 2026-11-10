@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module A, Module B, Module C, Module D, **Module E — Evidence & Provenance**  
-> **Next Active Module:** Module F — Semantic Purchase Integrity Engine (SPIE)  
+> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, **Module F — Semantic Purchase Integrity Engine (SPIE)**  
+> **Next Active Module:** Module G — Transaction Decision Engine (TDE)  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, **Module E: Evidence (Completed)** |
-| **Database Status** | 10 Migrations executed (`+ purchase_intents, purchase_evidence`) |
-| **Automated Tests** | **38 tests passing, 194 assertions, 100% pass rate** (`php artisan test`) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, **Module F: SPIE (Completed)** |
+| **Database Status** | 11 Migrations executed (`+ verification_decisions`) |
+| **Automated Tests** | **61 tests passing, 272 assertions, 100% pass rate** (`php artisan test`) |
 | **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module F: Semantic Purchase Integrity Engine (SPIE) |
+| **Next Milestone** | Module G: Transaction Decision Engine (TDE) & Payment Capture Policy |
 
 ---
 
@@ -101,6 +101,24 @@
   - `GET /api/v1/evidence/{id}/verify-integrity` (Per-record cryptographic check).
 - [x] **Frontend:** `types/evidence.ts`, `services/evidenceService.ts`.
 
+#### Module F: Semantic Purchase Integrity Engine (SPIE)
+- [x] **Database Migration & Model:**
+  - `verification_decisions` table: Storing `purchase_intent_id`, `checkout_payload_json`, `discrepancy_flags_json`, `confidence_score`, `verdict`, and `hold_payment_capture`.
+  - `VerificationDecision` model with enum casts, helper methods (`isMatch()`, `isCaptureHeld()`), and relationships.
+  - Linked `verificationDecisions()` and `latestVerificationDecision()` relations to `PurchaseIntent`.
+- [x] **Domain Engine & Enums:**
+  - `VerificationVerdict` enum (`MATCH`, `MISMATCH`, `UNCERTAIN`, `REQUIRE_CUSTOMER_CONFIRMATION`) with `shouldHoldCapture()`.
+  - `DiscrepancyCategory` enum (`merchant`, `price`, `currency`, `quantity`, `condition`, `specification`, `shipping`, `substitution`).
+  - `DiscrepancySeverity` enum (`critical`, `warning`, `info`).
+  - `DeterministicEvaluator`: Evaluates exact rules (merchant ID, currency code, line item quantity, price surges, discounts, hidden shipping fee surges, SKU).
+  - `SemanticAttributeEvaluator`: Evaluates condition (new vs refurbished/used), brand, model, colour variations, storage capacities (upgrades vs downgrades), and applies customer-defined substitution tolerances.
+  - `SemanticIntegrityEngine`: Orchestrates both evaluation layers, computes normalized confidence score (0.0000–1.0000), and outputs `IntegrityReport`.
+- [x] **API Endpoints & Validation:**
+  - `POST /api/v1/intents/{intentId}/verify` (`VerifyCheckoutRequest`): Evaluates checkout, sets verdict, syncs intent status, records decision.
+  - `GET /api/v1/intents/{intentId}/verifications`: Historical verification decisions.
+  - `GET /api/v1/verifications/{id}`: Detailed decision and discrepancy inspection.
+- [x] **Frontend:** `types/verification.ts`, `services/verificationService.ts`.
+
 ---
 
 ## 3. Database Migration Status
@@ -117,6 +135,7 @@
 | `2026_11_10_000004_create_merchant_status_audit_logs_table.php` | `merchant_status_audit_logs` | Applied |
 | `2026_11_10_000005_create_purchase_intents_table.php` | `purchase_intents` | Applied |
 | `2026_11_10_000006_create_purchase_evidence_table.php` | `purchase_evidence` | Applied |
+| `2026_11_10_000007_create_verification_decisions_table.php` | `verification_decisions` | Applied |
 
 ---
 
@@ -133,11 +152,28 @@ Authentication (Tests\Feature\Authentication)
  ✔ Unauthenticated request returns 401 json instead of missing route exception
  ✔ Authenticated user can access profile and logout
 
+Deterministic Evaluator (Tests\Unit\DeterministicEvaluator)
+ ✔ Clean matching payload has no discrepancies
+ ✔ Detects merchant mismatch
+ ✔ Detects currency mismatch
+ ✔ Detects unauthorized price surge
+ ✔ Tolerates favorable price discount
+ ✔ Detects hidden shipping fee surge
+
 Example (Tests\Feature\Example)
  ✔ The application returns a successful response
 
 Example (Tests\Unit\Example)
  ✔ That true is true
+
+Integrity Verification (Tests\Feature\IntegrityVerification)
+ ✔ Customer can verify checkout and receive match verdict
+ ✔ Price surge produces mismatch and updates intent status
+ ✔ Disallowed colour variation requires customer confirmation
+ ✔ Can list verification decisions for intent
+ ✔ Can view single verification decision
+ ✔ Customer cannot verify someone elses intent
+ ✔ Unauthenticated verification requests are rejected
 
 Merchant Agreement (Tests\Feature\MerchantAgreement)
  ✔ Can retrieve active merchant agreement
@@ -181,22 +217,36 @@ Purchase Intent (Tests\Feature\PurchaseIntent)
  ✔ Unauthenticated access to intents is rejected
  ✔ Price helpers return correct decimal values
 
-OK (38 tests, 194 assertions) — 100% Passed (Duration: ~540ms)
+Semantic Attribute Evaluator (Tests\Unit\SemanticAttributeEvaluator)
+ ✔ Detects unauthorized refurbished substitution
+ ✔ Tolerates refurbished substitution when pre approved
+ ✔ Detects brand mismatch
+ ✔ Colour variation without permission produces warning
+ ✔ Colour variation with permission is tolerated
+ ✔ Storage downgrade is critical violation
+ ✔ Storage upgrade is tolerated when policy permits
+
+Semantic Integrity Engine (Tests\Unit\SemanticIntegrityEngine)
+ ✔ Perfect match yields 1 confidence and match verdict
+ ✔ Critical failure yields 0 confidence and mismatch verdict
+ ✔ Untolerated warning triggers confirmation verdict
+
+OK (61 tests, 272 assertions) — 100% Passed (Duration: ~690ms)
 ```
 
 Frontend build test:
 ```
-next build (Turbopack) — Compiled successfully in 311ms. 0 errors.
+next build (Turbopack) — Compiled successfully in 275ms. 0 errors.
 ```
 
 ---
 
 ## 5. Next Development Tasks
 
-1. **Module F: Semantic Purchase Integrity Engine (SPIE):**
-   - Implement deterministic comparisons (exact price, currency, merchant ID, quantity, fee limits).
-   - Implement semantic attribute evaluations (brand, model, condition, specification matching, customer-allowed substitutions).
-   - Output structured discrepancy analysis report.
-2. **Module G: Transaction Decision Engine (TDE):**
-   - Output decision verdicts: `MATCH`, `MISMATCH`, `UNCERTAIN`, `REQUIRE_CUSTOMER_CONFIRMATION`.
-   - Implement capture hold and pre-capture enforcement.
+1. **Module G: Transaction Decision Engine (TDE):**
+   - Fine-tune capture hold policy and pre-capture enforcement rules.
+   - Implement customer confirmation resolution workflow (`POST /api/v1/verifications/{id}/confirm` and `/reject`).
+   - Transaction state transitions and webhook trigger notifications.
+2. **Module H: Merchant Compliance & Accountability:**
+   - Automated compliance scoring deduction algorithms.
+   - Merchant dispute adjudication and compliance event logging.

@@ -84,6 +84,22 @@ class PurchaseIntent extends Model
         return $this->hasMany(PurchaseEvidence::class)->orderBy('captured_at');
     }
 
+    /**
+     * Verification decisions performed on this intent.
+     */
+    public function verificationDecisions(): HasMany
+    {
+        return $this->hasMany(VerificationDecision::class)->latest('decided_at');
+    }
+
+    /**
+     * Most recent verification decision.
+     */
+    public function latestVerificationDecision(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(VerificationDecision::class)->latestOfMany('decided_at');
+    }
+
     // -------------------------------------------------------------------------
     // Business logic helpers
     // -------------------------------------------------------------------------

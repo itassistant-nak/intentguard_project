@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\MerchantAgreementController;
 use App\Http\Controllers\Api\V1\MerchantController;
+use App\Http\Controllers\Api\V1\IntegrityVerificationController;
 use App\Http\Controllers\Api\V1\PurchaseEvidenceController;
 use App\Http\Controllers\Api\V1\PurchaseIntentController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +51,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/intents/{intentId}/evidence/provenance-chain', [PurchaseEvidenceController::class, 'provenanceChain']);
         Route::get('/evidence/{id}', [PurchaseEvidenceController::class, 'show']);
         Route::get('/evidence/{id}/verify-integrity', [PurchaseEvidenceController::class, 'verifyIntegrity']);
+
+        // Module F: Semantic Purchase Integrity Engine (SPIE)
+        Route::post('/intents/{intentId}/verify', [IntegrityVerificationController::class, 'verify']);
+        Route::get('/intents/{intentId}/verifications', [IntegrityVerificationController::class, 'index']);
+        Route::get('/verifications/{id}', [IntegrityVerificationController::class, 'show']);
     });
 });
 
