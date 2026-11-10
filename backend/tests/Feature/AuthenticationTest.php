@@ -88,4 +88,57 @@ class AuthenticationTest extends TestCase
         // Token revoked
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
+
+    public function test_user_can_register_as_customer(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Alice Customer',
+            'email' => 'alice@customer.example',
+            'password' => 'SecurePass123!',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.email', 'alice@customer.example')
+            ->assertJsonPath('data.user.role', 'customer')
+            ->assertJsonStructure([
+                'data' => [
+                    'token',
+                    'token_type',
+                    'user' => ['id', 'name', 'email', 'role'],
+                ],
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'alice@customer.example',
+            'role' => 'customer',
+        ]);
+    }
+
+    public function test_registration_fails_with_duplicate_email(): void
+    {
+        User::factory()->create(['email' => 'existing@example.com']);
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Bob Duplicate',
+            'email' => 'existing@example.com',
+            'password' => 'SecurePass123!',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_registration_fails_with_short_password(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Short Pass',
+            'email' => 'short@example.com',
+            'password' => 'short',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
 }
+

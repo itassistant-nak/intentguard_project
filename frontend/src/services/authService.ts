@@ -33,6 +33,22 @@ export const authService = {
     return res;
   },
 
+  async register(name: string, email: string, password: string, role: 'customer' | 'merchant' = 'customer'): Promise<ApiResponse<AuthResponse>> {
+    const res = await apiRequest<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password, role }),
+    });
+
+    if (res.success && res.data?.token) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(TOKEN_KEY, res.data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+      }
+    }
+
+    return res;
+  },
+
   logout(): void {
     const token = this.getToken();
     if (token) {

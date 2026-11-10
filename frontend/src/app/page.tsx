@@ -6,37 +6,6 @@ import { MerchantLookupWidget } from '../features/merchants/components/MerchantL
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Navigation Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-              IG
-            </div>
-            <div>
-              <span className="text-lg font-black tracking-tight text-slate-900">
-                INTENT<span className="text-indigo-600">GUARD</span>
-              </span>
-              <span className="hidden sm:inline-block ml-2 px-2 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
-                FinTech Trust Protocol
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              REST API v1 Active
-            </span>
-            <Link
-              href="/admin"
-              className="px-3.5 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold shadow-sm transition-all"
-            >
-              Admin Console →
-            </Link>
-          </div>
-        </div>
-      </header>
 
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-white to-slate-50 border-b border-slate-200 py-16 px-4 sm:px-6 lg:px-8">
@@ -50,6 +19,30 @@ export default function Home() {
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Eliminating bait-and-switch checkout manipulation, hidden fee surges, and unauthorized item substitutions through cryptographic evidence and contractually accountable merchants.
           </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              href="/customer"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2"
+            >
+              <span>👤 Customer Portal</span>
+              <span>→</span>
+            </Link>
+            <Link
+              href="/merchant"
+              className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2"
+            >
+              <span>🏬 Merchant Portal</span>
+              <span>→</span>
+            </Link>
+            <Link
+              href="/admin"
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2"
+            >
+              <span>🛡️ Admin Console</span>
+              <span>→</span>
+            </Link>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 max-w-3xl mx-auto text-left">
             <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
