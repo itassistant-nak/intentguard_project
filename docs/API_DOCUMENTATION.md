@@ -55,6 +55,47 @@
   - `merchant`: Registered e-commerce merchants (agreement acceptance, profile, telemetry).
   - `customer`: End-consumers (purchase intent capture, dispute submission, confirmation).
 
+### 2.1 User Login
+Authenticates an administrator, merchant, or customer account and returns a Sanctum Bearer token.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/auth/login`
+- **Auth Required:** No
+- **Request Body:**
+  ```json
+  {
+    "email": "admin@intentguard.internal",
+    "password": "IntentGuardAdminPass!2026"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "token": "1|ntS2PXNwACVEwq7wnLAYE59XX8YUXiSObE1nXjrB94b0b5cf",
+      "token_type": "Bearer",
+      "user": {
+        "id": 1,
+        "name": "IntentGuard System Administrator",
+        "email": "admin@intentguard.internal",
+        "role": "admin"
+      }
+    },
+    "message": "Authenticated successfully."
+  }
+  ```
+
+### 2.2 Get Current User
+- **Method:** `GET`
+- **Path:** `/api/v1/auth/me`
+- **Auth Required:** Yes (`Bearer <token>`)
+
+### 2.3 User Logout
+- **Method:** `POST`
+- **Path:** `/api/v1/auth/logout`
+- **Auth Required:** Yes (`Bearer <token>`)
+
 ---
 
 ## 3. Endpoints: Module B & C (Merchant Registration & Agreements)
