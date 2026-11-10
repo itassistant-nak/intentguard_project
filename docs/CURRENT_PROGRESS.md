@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module B — Merchant Registration, Module C — Merchant Agreements  
-> **Next Active Module:** Module D — Purchase Intent Management & Module E — Evidence & Provenance  
+> **Completed Modules:** Module A, Module B, Module C, **Module D — Purchase Intent Management**  
+> **Next Active Module:** Module E — Evidence & Provenance  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements (Completed) |
-| **Database Status** | 8 Migrations executed (`merchants`, `merchant_agreements`, `merchant_agreement_acceptances`, `merchant_status_audit_logs`, `users`, `tokens`, `jobs`, `cache`) |
-| **Automated Tests** | **16 tests passing, 94 assertions, 100% pass rate** (`php artisan test`) |
-| **Frontend Status** | Next.js 14 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, **Module D: Purchase Intents (Completed)** |
+| **Database Status** | 9 Migrations executed (+ `purchase_intents`) |
+| **Automated Tests** | **26 tests passing, 138 assertions, 100% pass rate** (`php artisan test`) |
+| **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module D: Purchase Intent Management & Module E: Evidence & Provenance |
+| **Next Milestone** | Module E: Evidence & Provenance |
 
 ---
 

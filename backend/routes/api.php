@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\MerchantAgreementController;
 use App\Http\Controllers\Api\V1\MerchantController;
+use App\Http\Controllers\Api\V1\PurchaseIntentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,4 +34,14 @@ Route::prefix('v1')->group(function () {
     Route::get('/agreements/active', [MerchantAgreementController::class, 'active']);
     Route::post('/merchants/{id}/agreements/accept', [MerchantAgreementController::class, 'accept']);
     Route::get('/merchants/{id}/agreements', [MerchantAgreementController::class, 'merchantAgreements']);
+
+    // Module D: Purchase Intent Management (requires authentication)
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/intents', [PurchaseIntentController::class, 'store']);
+        Route::get('/intents', [PurchaseIntentController::class, 'index']);
+        Route::get('/intents/{identifier}', [PurchaseIntentController::class, 'show']);
+        Route::post('/intents/{id}/cancel', [PurchaseIntentController::class, 'cancel']);
+        Route::get('/intents/{id}/verify-integrity', [PurchaseIntentController::class, 'verifyIntegrity']);
+    });
 });
+
