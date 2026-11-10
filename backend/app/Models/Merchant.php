@@ -94,6 +94,22 @@ class Merchant extends Model
     }
 
     /**
+     * Telemetry compliance events and score history.
+     */
+    public function complianceEvents(): HasMany
+    {
+        return $this->hasMany(MerchantComplianceEvent::class)->latest('created_at');
+    }
+
+    /**
+     * Customer disputes opened against this merchant.
+     */
+    public function disputes(): HasMany
+    {
+        return $this->hasMany(CustomerDispute::class)->latest('created_at');
+    }
+
+    /**
      * Scope to find merchant by public IntentGuard ID or internal ID.
      */
     public function scopeByIdOrIntentGuardId(Builder $query, string|int $identifier): Builder

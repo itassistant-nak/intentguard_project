@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, **Module G — Transaction Decision Engine (TDE)**  
-> **Next Active Module:** Module H — Merchant Compliance & Accountability  
+> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, Module G, **Module H — Merchant Compliance & Accountability Telemetry**  
+> **Next Active Module:** Module I — PayPal Gateway Integration (Pre-Capture Authorization & Capture)  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, **Module G: TDE (Completed)** |
-| **Database Status** | 12 Migrations executed (`+ decision_resolution_audit_logs`) |
-| **Automated Tests** | **77 tests passing, 317 assertions, 100% pass rate** (`php artisan test`) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, Module G: TDE, **Module H: Compliance Telemetry (Completed)** |
+| **Database Status** | 14 Migrations executed (`+ merchant_compliance_events`, `customer_disputes`) |
+| **Automated Tests** | **94 tests passing, 368 assertions, 100% pass rate** (`php artisan test`) |
 | **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module H: Merchant Compliance & Accountability Telemetry |
+| **Next Milestone** | Module I: PayPal Gateway Integration (Orders v2 & Payments v2 Authorization & Capture) |
 
 ---
 
@@ -143,6 +143,40 @@
   - `GET /api/v1/verifications/pending-holds`: Lists decisions currently on capture hold awaiting customer confirmation.
 - [x] **Frontend:** Updated `types/verification.ts` and `services/verificationService.ts` (`confirmResolution`, `rejectResolution`, `getResolutionAuditLogs`, `listPendingHolds`).
 
+#### Module H: Merchant Compliance Telemetry & Customer Dispute Adjudication
+- [x] **Database Relational Migrations:**
+  - `merchant_compliance_events` table: Immutable append-only audit log tracking compliance score deltas, severity, evidence references, appeal status, and adjudication trail.
+  - `customer_disputes` table: Dispute lifecycle tracking (`purchase_intent_id`, `customer_id`, `merchant_id`, category, claimed amount, evidence reference, status, merchant response, administrative resolution notes).
+- [x] **Domain Models & Enums:**
+  - `MerchantComplianceEvent` model with enum casts (`ComplianceEventType`, `ComplianceAppealStatus`) and append-only constraints (`UPDATED_AT = null`).
+  - `CustomerDispute` model with enum casts (`DisputeCategory`, `DisputeStatus`) and terminal state checkers (`isTerminal()`).
+  - `ComplianceEventType` enum (`mismatch_confirmed`: -15.00, `unauthorized_substitution`: -10.00, `shipping_delay_breach`: -5.00, `chargeback_received`: -20.00, `positive_fulfilment_recovery`: +2.00).
+  - `ComplianceAppealStatus` enum (`none`, `pending_review`, `approved`, `rejected`).
+  - `DisputeCategory` enum (`item_not_as_described`, `unauthorized_substitution`, `excessive_shipping_delay`, `pricing_discrepancy`, `counterfeit_or_altered`, `other`).
+  - `DisputeStatus` enum (`opened`, `under_merchant_response`, `escalated_to_admin`, `resolved_refunded`, `resolved_replaced`, `resolved_rejected`).
+  - Updated `Merchant` model with `complianceEvents()` and `disputes()` relationships.
+- [x] **Compliance Service & Dynamic Scoring:**
+  - `ComplianceService`:
+    * `recordComplianceEvent`: Applies dynamic scoring curve (0.00–100.00 scale) and evaluates contractual thresholds:
+      - Score < 50.00%: Triggers automated contractual suspension (`suspended`) and audit trail.
+      - Score < 70.00%: Triggers placement under administrative review (`under_review`) and audit trail.
+    * `submitAppeal`: Allows merchants to appeal compliance score penalties with supporting evidence.
+    * `adjudicateAppeal`: Admin approval reverses penalty delta, restores compliance score, and automatically restores status to `verified` if score recovers >= 70.00%.
+    * `openDispute`: Customers file disputes against purchased intents, automatically logging a `DISPUTE_FILED` compliance event.
+    * `respondToDispute`: Merchants submit formal responses and mitigation details.
+    * `resolveDispute`: Administrative resolution (`resolved_refunded`, `resolved_replaced`, `resolved_rejected`) with mandatory resolution notes.
+- [x] **API Endpoints & Validation:**
+  - `GET /api/v1/merchants/{id}/compliance/events`: Paginated compliance history and score audit.
+  - `POST /api/v1/merchants/{id}/compliance/events` (`RecordComplianceEventRequest`): Admin telemetry recording.
+  - `POST /api/v1/compliance/events/{id}/appeal` (`SubmitAppealRequest`): Merchant appeal submission.
+  - `POST /api/v1/compliance/events/{id}/adjudicate` (`AdjudicateAppealRequest`): Admin adjudication.
+  - `POST /api/v1/intents/{id}/disputes` (`OpenDisputeRequest`): Customer dispute filing.
+  - `GET /api/v1/disputes`: Filtered list of disputes.
+  - `GET /api/v1/disputes/{id}`: Dispute detail view.
+  - `POST /api/v1/disputes/{id}/respond` (`RespondDisputeRequest`): Merchant response.
+  - `POST /api/v1/disputes/{id}/resolve` (`ResolveDisputeRequest`): Admin formal resolution.
+- [x] **Frontend:** `types/compliance.ts` and `services/complianceService.ts`.
+
 ---
 
 ## 3. Database Migration Status
@@ -161,6 +195,8 @@
 | `2026_11_10_000006_create_purchase_evidence_table.php` | `purchase_evidence` | Applied |
 | `2026_11_10_000007_create_verification_decisions_table.php` | `verification_decisions` | Applied |
 | `2026_11_10_000008_create_decision_resolution_audit_logs_table.php` | `decision_resolution_audit_logs` | Applied |
+| `2026_11_10_000009_create_merchant_compliance_events_table.php` | `merchant_compliance_events` | Applied |
+| `2026_11_10_000010_create_customer_disputes_table.php` | `customer_disputes` | Applied |
 
 ---
 
@@ -176,6 +212,22 @@ Authentication (Tests\Feature\Authentication)
  ✔ Login fails with invalid credentials
  ✔ Unauthenticated request returns 401 json instead of missing route exception
  ✔ Authenticated user can access profile and logout
+
+Compliance Service (Tests\Unit\ComplianceService)
+ ✔ Record compliance event deducts merchant score
+ ✔ Score cannot drop below zero or exceed 100
+ ✔ Score drop below 70 triggers under review status
+ ✔ Score drop below 50 triggers suspended status
+ ✔ Merchant can submit appeal
+ ✔ Approved appeal reverses score deduction and restores status
+ ✔ Rejected appeal sustains penalty
+
+Customer Dispute (Tests\Feature\CustomerDispute)
+ ✔ Customer can open dispute against intent
+ ✔ Customer can list their disputes
+ ✔ Merchant can respond to dispute
+ ✔ Admin can resolve dispute with refund
+ ✔ Unauthenticated user cannot access disputes
 
 Deterministic Evaluator (Tests\Unit\DeterministicEvaluator)
  ✔ Clean matching payload has no discrepancies
@@ -209,6 +261,13 @@ Merchant Approval Workflow (Tests\Feature\MerchantApprovalWorkflow)
  ✔ Can transition merchant status to under review
  ✔ Cannot verify merchant if active agreement not accepted
  ✔ Can verify merchant once active agreement is accepted
+
+Merchant Compliance (Tests\Feature\MerchantCompliance)
+ ✔ Can list compliance events for merchant
+ ✔ Admin can record compliance event
+ ✔ Non admin cannot record compliance event
+ ✔ Merchant can submit appeal
+ ✔ Admin can adjudicate appeal
 
 Merchant Registration (Tests\Feature\MerchantRegistration)
  ✔ Can register new merchant successfully
@@ -276,23 +335,23 @@ Transaction Decision Engine (Tests\Unit\TransactionDecisionEngine)
  ✔ Resolve customer rejection voids capture and updates status
  ✔ Resolving already resolved decision throws exception
 
-OK (77 tests, 317 assertions) — 100% Passed (Duration: ~820ms)
+OK (94 tests, 368 assertions) — 100% Passed (Duration: ~1.01s)
 ```
 
 Frontend build test:
 ```
-next build (Turbopack) — Compiled successfully in 277ms. 0 errors.
+next build (Turbopack) — Compiled successfully in 358ms. Finished TypeScript in 992ms. 0 errors.
 ```
 
 ---
 
 ## 5. Next Development Tasks
 
-1. **Module H: Merchant Compliance & Accountability Telemetry:**
-   - Compliance event types (`mismatch_confirmed`, `delivery_delayed`, `chargeback_received`, `dispute_filed`).
-   - Dynamic 100-point compliance scoring algorithm with score degradation and recovery curves.
-   - Merchant dispute adjudication workflow and contractual penalties.
-2. **Module I: PayPal Gateway Integration:**
-   - PayPal Orders v2 & Payments v2 client (`intent: AUTHORIZE`).
+1. **Module I: PayPal Gateway Integration (Orders v2 & Payments v2):**
+   - PayPal Orders v2 client with two-step authorization (`intent: AUTHORIZE`).
    - Pre-capture interception using TDE verdicts (`CAPTURE_IMMEDIATE`, `CAPTURE_HOLD`, `CAPTURE_VOID`).
-   - PayPal Webhook verification and idempotency protection.
+   - Capture hold management and webhook signature verification (`PAYMENT.AUTHORIZATION.CREATED`, `CHECKOUT.ORDER.APPROVED`).
+   - Idempotency key protection and replay prevention.
+2. **Module J: Audit, Provenance & Administrative Reporting:**
+   - Cryptographic tamper-evident audit trails.
+   - Comprehensive compliance reporting and merchant analytics.

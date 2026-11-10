@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\V1\MerchantAgreementController;
 use App\Http\Controllers\Api\V1\MerchantController;
 use App\Http\Controllers\Api\V1\IntegrityVerificationController;
 use App\Http\Controllers\Api\V1\PurchaseEvidenceController;
+use App\Http\Controllers\Api\V1\CustomerDisputeController;
+use App\Http\Controllers\Api\V1\MerchantComplianceController;
 use App\Http\Controllers\Api\V1\PurchaseIntentController;
 use App\Http\Controllers\Api\V1\TransactionDecisionController;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +65,18 @@ Route::prefix('v1')->group(function () {
         Route::post('/verifications/{id}/confirm', [TransactionDecisionController::class, 'confirm']);
         Route::post('/verifications/{id}/reject', [TransactionDecisionController::class, 'reject']);
         Route::get('/verifications/{id}/audit-log', [TransactionDecisionController::class, 'auditLog']);
+
+        // Module H: Merchant Compliance Telemetry & Dispute Adjudication
+        Route::get('/merchants/{merchantId}/compliance/events', [MerchantComplianceController::class, 'events']);
+        Route::post('/merchants/{merchantId}/compliance/events', [MerchantComplianceController::class, 'recordEvent']);
+        Route::post('/compliance/events/{id}/appeal', [MerchantComplianceController::class, 'submitAppeal']);
+        Route::post('/compliance/events/{id}/adjudicate', [MerchantComplianceController::class, 'adjudicateAppeal']);
+
+        Route::post('/intents/{intentId}/disputes', [CustomerDisputeController::class, 'store']);
+        Route::get('/disputes', [CustomerDisputeController::class, 'index']);
+        Route::get('/disputes/{id}', [CustomerDisputeController::class, 'show']);
+        Route::post('/disputes/{id}/respond', [CustomerDisputeController::class, 'respond']);
+        Route::post('/disputes/{id}/resolve', [CustomerDisputeController::class, 'resolve']);
     });
 });
 
