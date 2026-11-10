@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\AdminAuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\MerchantAgreementController;
 use App\Http\Controllers\Api\V1\MerchantController;
@@ -86,6 +87,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/payments/{id}', [PayPalPaymentController::class, 'show']);
         Route::post('/payments/{id}/capture-held', [PayPalPaymentController::class, 'captureHeld']);
         Route::post('/payments/{id}/void-held', [PayPalPaymentController::class, 'voidHeld']);
+
+        // Module J: System-Wide Audit, Provenance & Administrative Reporting
+        Route::get('/admin/audit-logs', [AdminAuditController::class, 'index']);
+        Route::get('/admin/audit-logs/verify-chain', [AdminAuditController::class, 'verifyChain']);
+        Route::get('/admin/metrics', [AdminAuditController::class, 'metrics']);
     });
 
     // Inbound Webhook Ingestion (Unauthenticated, verified via cryptographic digital signatures)

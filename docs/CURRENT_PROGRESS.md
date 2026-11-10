@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, Module G, Module H, **Module I — PayPal Gateway Integration (Completed)**  
-> **Next Active Module:** Module J — System-Wide Audit, Provenance & Administrative Reporting  
+> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, Module G, Module H, Module I, **Module J — System-Wide Audit & Security (Completed)**  
+> **Next Active Milestone:** Phase 10: Frontend User Interfaces (Customer, Merchant, Admin Portals)  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, Module G: TDE, Module H: Compliance, **Module I: PayPal Integration (Completed)** |
-| **Database Status** | 16 Migrations executed (`+ payment_authorizations`, `webhook_events`) |
-| **Automated Tests** | **117 tests passing, 441 assertions, 100% pass rate** (`php artisan test`) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, Module G: TDE, Module H: Compliance, Module I: PayPal, **Module J: Audit & Provenance (Completed)** |
+| **Database Status** | 17 Migrations executed (`+ system_audit_logs`) |
+| **Automated Tests** | **130 tests passing, 537 assertions, 100% pass rate** (`php artisan test`) |
 | **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module J: System-Wide Audit, Provenance & Administrative Reporting |
+| **Next Milestone** | Phase 10: Frontend User Interfaces (Customer, Merchant, Admin Portals) |
 
 ---
 
@@ -214,6 +214,29 @@
   - `POST /api/v1/webhooks/paypal`: Cryptographically verified webhook ingestion.
 - [x] **Frontend:** `types/payment.ts` and `services/paymentService.ts`.
 
+#### Module J: System-Wide Audit, Provenance & Administrative Reporting
+- [x] **Database Relational Migrations:**
+  - `system_audit_logs` table: Centralized immutable audit trail (`auditable_type`, `auditable_id`, `event`, `actor_type`, `actor_id`, `actor_email`, `ip_address`, `user_agent`, `old_values_json`, `new_values_json`, `metadata_json`, `previous_hash`, `tamper_hash`, `created_at`). Strictly append-only (`UPDATED_AT = null`).
+- [x] **Domain Models & Enums:**
+  - `SystemAuditLog` model with deterministic SHA-256 linear hash chain calculation (`SystemAuditLog::computeDigest`).
+  - `SystemAuditEvent` enum: Comprehensive event taxonomy covering merchants, agreements, intents, verifications, payments, disputes, compliance, security logins, and rate limits.
+  - Added factory: `SystemAuditLogFactory`.
+- [x] **Audit & Reporting Services:**
+  - `AuditLogService`:
+    * `record`: Automatically chains each new audit record to the preceding record's `tamper_hash`, forming a tamper-evident blockchain-style hash chain.
+    * `verifyChain`: Traverses sequential audit records, recalculates payload digests, and mathematically verifies that no records have been altered, injected, or deleted.
+  - `AdminReportingService`:
+    * Aggregates platform-wide fraud prevention impact ($ value and count of price surges and mismatches intercepted).
+    * Calculates intent distributions, payment capture volumes (captured vs held vs voided), merchant health averages, and dispute metrics.
+- [x] **Security Middleware:**
+  - `EnforceSecurityHeadersMiddleware`: Injects OWASP-standard security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, CSP) across all HTTP responses.
+- [x] **REST API Endpoints & Resources:**
+  - `GET /api/v1/admin/audit-logs` (`SystemAuditLogResource`): Filterable paginated system audit log explorer.
+  - `GET /api/v1/admin/audit-logs/verify-chain`: Cryptographic chain verification endpoint.
+  - `GET /api/v1/admin/metrics`: Platform analytics and fraud prevention metrics.
+  - Access control: Strict zero-trust restriction to users with `role === 'admin'`.
+- [x] **Frontend:** `types/audit.ts` and `services/auditService.ts`.
+
 ---
 
 ## 3. Database Migration Status
@@ -236,6 +259,7 @@
 | `2026_11_10_000010_create_customer_disputes_table.php` | `customer_disputes` | Applied |
 | `2026_11_10_000011_create_payment_authorizations_table.php` | `payment_authorizations` | Applied |
 | `2026_11_10_000012_create_webhook_events_table.php` | `webhook_events` | Applied |
+| `2026_11_10_000013_create_system_audit_logs_table.php` | `system_audit_logs` | Applied |
 
 ---
 
@@ -245,6 +269,27 @@ Ran via `php artisan test --testdox`:
 ```
 Runtime: PHP 8.4.26
 Configuration: phpunit.xml (SQLite in-memory)
+
+Admin Audit (Tests\Feature\AdminAudit)
+ ✔ Admin can view system audit logs
+ ✔ Admin can filter audit logs by event
+ ✔ Admin can verify audit chain integrity
+ ✔ Non admin is forbidden from audit logs
+ ✔ Security headers are enforced on api responses
+
+Admin Metrics (Tests\Feature\AdminMetrics)
+ ✔ Admin can retrieve platform metrics
+ ✔ Non admin is forbidden from platform metrics
+
+Admin Reporting Service (Tests\Unit\AdminReportingService)
+ ✔ Get platform metrics calculates totals and fraud prevention
+
+Audit Log Service (Tests\Unit\AuditLogService)
+ ✔ Record creates audit log with cryptographic hash
+ ✔ Subsequent records form a linear hash chain
+ ✔ Verify chain passes for untampered logs
+ ✔ Verify chain detects tampered payload data
+ ✔ Verify chain detects severed hash link
 
 Authentication (Tests\Feature\Authentication)
  ✔ User can login with valid credentials
@@ -405,23 +450,22 @@ Transaction Decision Engine (Tests\Unit\TransactionDecisionEngine)
  ✔ Resolve customer rejection voids capture and updates status
  ✔ Resolving already resolved decision throws exception
 
-OK (117 tests, 441 assertions) — 100% Passed (Duration: ~1.38s)
+OK (130 tests, 537 assertions) — 100% Passed (Duration: ~1.44s)
 ```
 
 Frontend build test:
 ```
-next build (Turbopack) — Compiled successfully in 288ms. Finished TypeScript in 1076ms. 0 errors.
+next build (Turbopack) — Compiled successfully in 277ms. Finished TypeScript in 970ms. 0 errors.
 ```
 
 ---
 
 ## 5. Next Development Tasks
 
-1. **Module J: System-Wide Audit, Provenance & Administrative Reporting:**
-   - Centralized immutable audit trails across all state mutations (intents, decisions, compliance, payments).
-   - Administrative reporting console: fraud interception statistics, merchant compliance trends, and transaction provenance inspection.
-   - Zero-trust API validation hardening, rate limiting, and HMAC signature protection for external partner webhooks.
-2. **Phase 10: Frontend User Interfaces (Next.js):**
+1. **Phase 10: Frontend User Interfaces (Next.js):**
    - Customer Portal: purchase intent creation, interactive mismatch warnings, one-click confirmation for held transactions.
-   - Merchant Portal: registration, cryptographic agreement signing modal, fulfilment telemetry, and dispute response.
-   - Administrator Console: merchant vetting queue, transaction integrity monitor, audit log explorer.
+   - Merchant Portal: onboarding & verification status, cryptographic agreement signing modal, fulfilment telemetry, and dispute response.
+   - Administrator Console: merchant vetting queue, transaction integrity monitor, audit log explorer, and cryptographic provenance verifier.
+2. **Phase 13: End-to-End Quality Assurance & Sandboxing:**
+   - Adversarial attack simulations (tampered checkout payloads, replay attacks, forged webhooks).
+   - PayPal Sandbox live purchase flow verification.
