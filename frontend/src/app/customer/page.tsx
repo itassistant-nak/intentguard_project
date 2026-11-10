@@ -98,7 +98,7 @@ export default function CustomerPortalPage() {
   const loadHolds = async () => {
     try {
       setLoadingHolds(true);
-      const res = await listPendingHolds(1);
+      const res = await listPendingHolds();
       setPendingHolds(res.data || []);
     } catch (err) {
       console.error(err);
@@ -109,29 +109,30 @@ export default function CustomerPortalPage() {
 
   const handleQuickLogin = async () => {
     try {
-      await authService.login('customer@intentguard.internal', 'CustomerPass!2026');
-      const currentUser = authService.getUser();
-      setUser(currentUser);
-      await loadCustomerIntents();
-      await loadHolds();
+      const res = await authService.login('customer@intentguard.internal', 'CustomerPass!2026');
+      if (res.data?.user) {
+        setUser(res.data.user);
+        await loadCustomerIntents();
+        await loadHolds();
+      }
     } catch (err) {
-      console.error(err);
+      alert(err instanceof Error ? err.message : 'Login failed');
     }
   };
 
   const fillSimulatorFromIntent = (intent: PurchaseIntent) => {
     setSelectedIntentId(intent.id);
-    setSimMerchantId(intent.merchant_id || 1);
+    setSimMerchantId(intent.merchant_id);
     setSimPriceDollars((intent.unit_price_cents / 100).toFixed(2));
     setSimShippingDollars(
       intent.shipping_conditions?.shipping_cost_cents
         ? (intent.shipping_conditions.shipping_cost_cents / 100).toFixed(2)
-        : '15.00'
+        : '0.00'
     );
     setSimCondition(intent.specification?.condition || 'new');
-    setSimBrand(intent.specification?.brand || 'Sony');
-    setSimModel(intent.specification?.model || 'WH-1000XM5');
-    setSimQuantity(intent.quantity || 1);
+    setSimBrand(intent.specification?.brand || '');
+    setSimModel(intent.specification?.model || '');
+    setSimQuantity(intent.quantity);
   };
 
   const handleCreateIntent = async (e: React.FormEvent) => {
@@ -140,38 +141,35 @@ export default function CustomerPortalPage() {
     setCreateError(null);
 
     try {
-      const priceCents = Math.round(parseFloat(unitPriceDollars) * 100);
+      const unitPriceCents = Math.round(parseFloat(unitPriceDollars) * 100);
       const shippingCents = Math.round(parseFloat(maxShippingFeeDollars) * 100);
 
-      const created = await recordIntent({
-        merchant_id: Number(merchantDbId),
+      await recordIntent({
+        merchant_id: merchantDbId,
         product_name: productName,
         product_sku: sku,
-        quantity: Number(quantity),
-        unit_price_cents: priceCents,
+        unit_price_cents: unitPriceCents,
         currency,
+        quantity,
+        shipping_conditions_json: {
+          method: 'Standard Tracked Shipping',
+          estimated_days_min: 1,
+          estimated_days_max: maxShippingDays,
+          shipping_cost_cents: shippingCents,
+        },
         specification_json: {
           brand,
           model,
           condition,
-          colour: 'Black',
-        },
-        shipping_conditions_json: {
-          method: 'Standard Tracked Courier',
-          estimated_days_min: 1,
-          estimated_days_max: Number(maxShippingDays),
-          shipping_cost_cents: shippingCents,
         },
         allowed_substitutions_json: {
           colour_variants: allowColorVariants,
           storage_upgrade: allowStorageUpgrades,
-          refurbished_ok: condition === 'refurbished',
         },
       });
 
       await loadCustomerIntents();
       setActiveTab('intents');
-      fillSimulatorFromIntent(created);
     } catch (err: unknown) {
       setCreateError(err instanceof Error ? err.message : 'Failed to record purchase intent.');
     } finally {
@@ -183,45 +181,29 @@ export default function CustomerPortalPage() {
     e.preventDefault();
     if (!selectedIntentId) return;
 
-    setVerifying(true);
-    setVerifyError(null);
-    setVerificationResult(null);
-
     try {
+      setVerifying(true);
+      setVerifyError(null);
+      setVerificationResult(null);
+
       const priceCents = Math.round(parseFloat(simPriceDollars) * 100);
       const shippingCents = Math.round(parseFloat(simShippingDollars) * 100);
 
-      const result = await verifyCheckout(selectedIntentId, {
-        merchant_id: Number(simMerchantId),
+      const res = await verifyCheckout(selectedIntentId, {
+        merchant_id: simMerchantId,
         currency,
         unit_price_cents: priceCents,
-        quantity: Number(simQuantity),
-        total_price_cents: priceCents * Number(simQuantity) + shippingCents,
         shipping_cost_cents: shippingCents,
-        product_name: productName,
-        product_sku: sku,
+        total_price_cents: priceCents * simQuantity + shippingCents,
+        quantity: simQuantity,
         specification_json: {
           brand: simBrand,
           model: simModel,
           condition: simCondition,
         },
-        line_items: [
-          {
-            product_name: productName,
-            product_sku: sku,
-            unit_price_cents: priceCents,
-            quantity: Number(simQuantity),
-            specification_json: {
-              brand: simBrand,
-              model: simModel,
-              condition: simCondition,
-            },
-          },
-        ],
       });
 
-      setVerificationResult(result);
-      await loadCustomerIntents();
+      setVerificationResult(res);
       await loadHolds();
     } catch (err: unknown) {
       setVerifyError(err instanceof Error ? err.message : 'Verification failed.');
@@ -230,10 +212,13 @@ export default function CustomerPortalPage() {
     }
   };
 
-  const handleTamperCheck = async (id: number) => {
+  const handleTamperCheck = async (intentId: number) => {
     try {
-      const check = await verifyIntentIntegrity(id);
-      setIntegrityResults((prev) => ({ ...prev, [id]: check }));
+      const res = await verifyIntentIntegrity(intentId);
+      setIntegrityResults((prev) => ({
+        ...prev,
+        [intentId]: res,
+      }));
     } catch (err) {
       console.error(err);
     }
@@ -299,31 +284,31 @@ export default function CustomerPortalPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 flex flex-col text-slate-900 pb-16">
+    <main className="min-h-screen bg-[#F3F6FB] flex flex-col text-[#101D35] pb-16">
       {/* Header Banner */}
-      <section className="bg-slate-900 text-white py-10 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+      <section className="bg-[#101D35] text-white py-10 px-4 sm:px-6 lg:px-8 border-b border-[#1C2C4E]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full text-xs font-semibold bg-[#176BEB]/20 text-[#60A5FA] border border-[#176BEB]/30 uppercase tracking-wider">
               👤 Customer Protection Console
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight mt-2">
-              Purchase Intent & Pre-Capture Verification
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight mt-2 text-white">
+              Purchase Intent &amp; Pre-Capture Verification
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
               Lock in your exact purchase specifications cryptographically. Verify checkouts in real-time before payment capture and release or void held transactions with 1-click.
             </p>
           </div>
 
           {!user && (
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row items-center gap-3">
+            <div className="bg-[#1A2C4E] p-4 rounded-xl border border-[#2B416C] flex flex-col sm:flex-row items-center gap-3">
               <div className="text-xs text-slate-300">
                 <span className="font-semibold block text-white">Not Signed In</span>
                 Sign in to manage intents and verify checkouts.
               </div>
               <button
                 onClick={handleQuickLogin}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap"
+                className="px-4 py-2 bg-[#176BEB] hover:bg-[#1258C2] text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap cursor-pointer transition-colors"
               >
                 ⚡ Sign In as Alex Customer
               </button>
@@ -335,13 +320,13 @@ export default function CustomerPortalPage() {
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6 flex-1">
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap gap-2 border-b border-slate-200/80 pb-3">
           <button
             onClick={() => setActiveTab('intents')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'intents'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#176BEB] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-[#F3F6FB] hover:text-[#101D35] border border-slate-200/80'
             }`}
           >
             <span>📋 My Purchase Intents</span>
@@ -352,10 +337,10 @@ export default function CustomerPortalPage() {
 
           <button
             onClick={() => setActiveTab('new_intent')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'new_intent'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#176BEB] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-[#F3F6FB] hover:text-[#101D35] border border-slate-200/80'
             }`}
           >
             <span>➕ Record New Purchase Intent</span>
@@ -363,10 +348,10 @@ export default function CustomerPortalPage() {
 
           <button
             onClick={() => setActiveTab('verifier')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'verifier'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#176BEB] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-[#F3F6FB] hover:text-[#101D35] border border-slate-200/80'
             }`}
           >
             <span>🔬 Pre-Capture SPIE Verifier</span>
@@ -374,15 +359,15 @@ export default function CustomerPortalPage() {
 
           <button
             onClick={() => setActiveTab('holds')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'holds'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#EAA33A] text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-[#F3F6FB] hover:text-[#101D35] border border-slate-200/80'
             }`}
           >
             <span>⚠️ Held Capture Authorizations</span>
             {pendingHolds.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-[10px] animate-pulse">
+              <span className="px-1.5 py-0.5 bg-white text-[#B47318] font-black rounded-full text-[10px] animate-pulse">
                 {pendingHolds.length}
               </span>
             )}
@@ -394,27 +379,27 @@ export default function CustomerPortalPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-slate-900">Your Active Purchase Intents</h2>
+                <h2 className="text-base font-bold text-[#101D35]">Your Active Purchase Intents</h2>
                 <p className="text-xs text-slate-500">Each intent is protected by a SHA-256 cryptographic digest.</p>
               </div>
               <button
                 onClick={loadCustomerIntents}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                className="text-xs text-[#176BEB] hover:text-[#1258C2] font-semibold cursor-pointer"
               >
                 🔄 Refresh
               </button>
             </div>
 
             {loadingIntents ? (
-              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200">
+              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200/80">
                 Loading intents...
               </div>
             ) : intents.length === 0 ? (
-              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200 space-y-3">
+              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200/80 space-y-3">
                 <p>No purchase intents recorded yet.</p>
                 <button
                   onClick={() => setActiveTab('new_intent')}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                  className="px-4 py-2 bg-[#176BEB] hover:bg-[#1258C2] text-white text-xs font-bold rounded-lg shadow-sm cursor-pointer"
                 >
                   Create Your First Intent →
                 </button>
@@ -426,27 +411,27 @@ export default function CustomerPortalPage() {
                   return (
                     <div
                       key={intent.id}
-                      className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hover:border-slate-300 transition-all"
+                      className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 hover:border-slate-300 transition-all"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-slate-900 text-base">
+                            <h3 className="font-bold text-[#101D35] text-base">
                               {intent.product_name}
                             </h3>
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[11px] font-mono">
+                            <span className="px-2 py-0.5 bg-[#F3F6FB] text-[#101D35] rounded-md text-[11px] font-mono border border-slate-200">
                               SKU: {intent.product_sku || 'N/A'}
                             </span>
                             <span
                               className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                 intent.status === 'verified'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  ? 'bg-[#12B981]/10 text-[#0E9B6C] border border-[#12B981]/30'
                                   : intent.status === 'pending'
-                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  ? 'bg-[#EAA33A]/10 text-[#A06813] border border-[#EAA33A]/30'
                                   : intent.status === 'mismatched'
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  ? 'bg-red-50 text-red-700 border border-red-200'
                                   : intent.status === 'confirmed'
-                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  ? 'bg-[#176BEB]/10 text-[#176BEB] border border-[#176BEB]/30'
                                   : 'bg-slate-100 text-slate-600'
                               }`}
                             >
@@ -454,18 +439,18 @@ export default function CustomerPortalPage() {
                             </span>
                           </div>
                           <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3">
-                            <span>Merchant: <strong className="font-mono text-slate-700">{intent.merchant_intentguard_id || `ID #${intent.merchant_id}`}</strong></span>
+                            <span>Merchant: <strong className="font-mono text-[#101D35]">{intent.merchant_intentguard_id || `ID #${intent.merchant_id}`}</strong></span>
                             <span>•</span>
-                            <span>Condition: <strong className="capitalize text-slate-700">{intent.specification?.condition || 'New'}</strong></span>
+                            <span>Condition: <strong className="capitalize text-[#101D35]">{intent.specification?.condition || 'New'}</strong></span>
                             <span>•</span>
-                            <span>Brand: <strong className="text-slate-700">{intent.specification?.brand || 'N/A'}</strong></span>
+                            <span>Brand: <strong className="text-[#101D35]">{intent.specification?.brand || 'N/A'}</strong></span>
                             <span>•</span>
-                            <span>Qty: <strong className="text-slate-700">{intent.quantity}</strong></span>
+                            <span>Qty: <strong className="text-[#101D35]">{intent.quantity}</strong></span>
                           </div>
                         </div>
 
                         <div className="text-right">
-                          <div className="text-xl font-black text-slate-900">
+                          <div className="text-xl font-black text-[#176BEB]">
                             {formatPrice(intent.unit_price_cents, intent.currency)}
                           </div>
                           <div className="text-[11px] text-slate-500 font-mono">
@@ -475,26 +460,26 @@ export default function CustomerPortalPage() {
                       </div>
 
                       {/* Cryptographic SHA-256 Digest Bar */}
-                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs flex flex-col md:flex-row md:items-center justify-between gap-2">
+                      <div className="bg-[#F3F6FB] p-3 rounded-xl border border-slate-200/80 text-xs flex flex-col md:flex-row md:items-center justify-between gap-2">
                         <div className="font-mono text-[11px] text-slate-600 truncate max-w-xl">
-                          <span className="font-bold text-slate-800">SHA-256 Intent Hash:</span> {intent.intent_hash}
+                          <span className="font-bold text-[#101D35]">SHA-256 Intent Hash:</span> {intent.intent_hash}
                         </div>
 
                         <div className="flex items-center gap-2">
                           {check ? (
                             check.integrity_ok ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0E9B6C] bg-[#12B981]/10 px-2 py-0.5 rounded border border-[#12B981]/30">
                                 ✓ Digest Intact
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
                                 ⚠ Tampering Detected!
                               </span>
                             )
                           ) : (
                             <button
                               onClick={() => handleTamperCheck(intent.id)}
-                              className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded text-[11px] font-semibold"
+                              className="px-2 py-1 bg-white hover:bg-slate-100 text-[#101D35] border border-slate-200 rounded text-[11px] font-semibold cursor-pointer shadow-2xs"
                             >
                               Verify Cryptographic Hash
                             </button>
@@ -509,7 +494,7 @@ export default function CustomerPortalPage() {
                             fillSimulatorFromIntent(intent);
                             setActiveTab('verifier');
                           }}
-                          className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg border border-indigo-200 flex items-center gap-1.5"
+                          className="px-3 py-1.5 bg-[#EEF5FF] hover:bg-[#DBEAFE] text-[#176BEB] text-xs font-semibold rounded-lg border border-[#BFDBFE] flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
                           <span>🔬 Simulate Checkout Verification</span>
                           <span>→</span>
@@ -521,7 +506,7 @@ export default function CustomerPortalPage() {
                               setDisputeIntent(intent);
                               setDisputeClaimDollars((intent.unit_price_cents / 100).toFixed(2));
                             }}
-                            className="px-2.5 py-1 text-slate-700 hover:text-rose-700 text-xs font-semibold"
+                            className="px-2.5 py-1 text-[#EAA33A] hover:text-[#B47318] text-xs font-semibold cursor-pointer"
                           >
                             File Integrity Dispute
                           </button>
@@ -529,7 +514,7 @@ export default function CustomerPortalPage() {
                           {intent.status === 'pending' && (
                             <button
                               onClick={() => handleCancelIntent(intent.id)}
-                              className="px-2.5 py-1 text-rose-600 hover:text-rose-800 text-xs font-semibold"
+                              className="px-2.5 py-1 text-red-600 hover:text-red-800 text-xs font-semibold cursor-pointer"
                             >
                               Cancel Intent
                             </button>
@@ -546,16 +531,16 @@ export default function CustomerPortalPage() {
 
         {/* TAB 2: CREATE NEW INTENT */}
         {activeTab === 'new_intent' && (
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto space-y-6">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs max-w-3xl mx-auto space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Record Purchase Intent</h2>
+              <h2 className="text-lg font-bold text-[#101D35]">Record Purchase Intent</h2>
               <p className="text-xs text-slate-500 mt-1">
                 Establish the cryptographic baseline specifications for what you intend to purchase. Any deviation at checkout will trigger an integrity alert.
               </p>
             </div>
 
             {createError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium">
                 {createError}
               </div>
             )}
@@ -563,7 +548,7 @@ export default function CustomerPortalPage() {
             <form onSubmit={handleCreateIntent} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Merchant Record ID (Numeric) *
                   </label>
                   <input
@@ -572,7 +557,7 @@ export default function CustomerPortalPage() {
                     required
                     value={merchantDbId}
                     onChange={(e) => setMerchantDbId(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none font-mono"
                   />
                   <span className="text-[10px] text-slate-400 mt-0.5 block">
                     e.g. 1 (Apex Electronics Ltd — IG-MCH-APEX0001)
@@ -580,7 +565,7 @@ export default function CustomerPortalPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Product SKU *
                   </label>
                   <input
@@ -588,13 +573,13 @@ export default function CustomerPortalPage() {
                     required
                     value={sku}
                     onChange={(e) => setSku(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#101D35] mb-1">
                   Product Name *
                 </label>
                 <input
@@ -602,13 +587,13 @@ export default function CustomerPortalPage() {
                   required
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Brand *
                   </label>
                   <input
@@ -616,11 +601,11 @@ export default function CustomerPortalPage() {
                     required
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Model *
                   </label>
                   <input
@@ -628,17 +613,17 @@ export default function CustomerPortalPage() {
                     required
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Condition *
                   </label>
                   <select
                     value={condition}
                     onChange={(e) => setCondition(e.target.value as 'new' | 'refurbished' | 'used' | 'open_box')}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none bg-white"
                   >
                     <option value="new">Brand New (Factory Sealed)</option>
                     <option value="refurbished">Certified Refurbished</option>
@@ -648,7 +633,7 @@ export default function CustomerPortalPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Unit Price ($) *
                   </label>
                   <input
@@ -657,11 +642,11 @@ export default function CustomerPortalPage() {
                     required
                     value={unitPriceDollars}
                     onChange={(e) => setUnitPriceDollars(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Currency *
                   </label>
                   <input
@@ -669,11 +654,11 @@ export default function CustomerPortalPage() {
                     required
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono uppercase"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none font-mono uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Quantity *
                   </label>
                   <input
@@ -682,25 +667,25 @@ export default function CustomerPortalPage() {
                     required
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Maximum Shipping SLA (Days)
                   </label>
                   <input
                     type="number"
                     value={maxShippingDays}
                     onChange={(e) => setMaxShippingDays(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#101D35] mb-1">
                     Maximum Allowed Shipping Fee ($)
                   </label>
                   <input
@@ -708,13 +693,13 @@ export default function CustomerPortalPage() {
                     step="0.01"
                     value={maxShippingFeeDollars}
                     onChange={(e) => setMaxShippingFeeDollars(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <span className="block text-xs font-semibold text-slate-700">
+                <span className="block text-xs font-semibold text-[#101D35]">
                   Acceptable Substitution Boundaries
                 </span>
                 <div className="space-y-1.5">
@@ -723,7 +708,7 @@ export default function CustomerPortalPage() {
                       type="checkbox"
                       checked={allowColorVariants}
                       onChange={(e) => setAllowColorVariants(e.target.checked)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                      className="rounded accent-[#176BEB] focus:ring-[#176BEB]"
                     />
                     Allow non-material colour variant substitutions (e.g. Silver instead of Black)
                   </label>
@@ -732,7 +717,7 @@ export default function CustomerPortalPage() {
                       type="checkbox"
                       checked={allowStorageUpgrades}
                       onChange={(e) => setAllowStorageUpgrades(e.target.checked)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                      className="rounded accent-[#176BEB] focus:ring-[#176BEB]"
                     />
                     Allow free capacity/storage upgrades at no extra cost (e.g. 512GB instead of 256GB)
                   </label>
@@ -743,14 +728,14 @@ export default function CustomerPortalPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('intents')}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingIntent}
-                  className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-[#176BEB] hover:bg-[#1258C2] rounded-lg disabled:opacity-50 shadow-xs transition-colors cursor-pointer"
                 >
                   {creatingIntent ? 'Hashing & Recording...' : 'Record Cryptographic Intent'}
                 </button>
@@ -762,9 +747,9 @@ export default function CustomerPortalPage() {
         {/* TAB 3: VERIFICATION SIMULATOR */}
         {activeTab === 'verifier' && (
           <div className="space-y-6 max-w-4xl mx-auto">
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-[#101D35]">
                   Pre-Capture Semantic Purchase Integrity Verifier (SPIE)
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
@@ -774,7 +759,7 @@ export default function CustomerPortalPage() {
 
               {/* Target Intent Selector */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#101D35] mb-1">
                   Select Purchase Intent Baseline:
                 </label>
                 <select
@@ -784,7 +769,7 @@ export default function CustomerPortalPage() {
                     const found = intents.find((i) => i.id === id);
                     if (found) fillSimulatorFromIntent(found);
                   }}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none bg-white font-mono"
                 >
                   {intents.map((i) => (
                     <option key={i.id} value={i.id}>
@@ -795,8 +780,8 @@ export default function CustomerPortalPage() {
               </div>
 
               {/* Quick Attack Vector Presets */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <span className="text-xs font-semibold text-slate-700 block">
+              <div className="p-3.5 bg-[#F3F6FB] border border-slate-200 rounded-xl space-y-2">
+                <span className="text-xs font-bold text-[#101D35] block">
                   Quick Scenario Presets:
                 </span>
                 <div className="flex flex-wrap gap-2 text-xs">
@@ -807,7 +792,7 @@ export default function CustomerPortalPage() {
                       setSimCondition('new');
                       setSimShippingDollars('15.00');
                     }}
-                    className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-700 font-semibold border border-emerald-300 rounded-lg shadow-xs"
+                    className="px-2.5 py-1 bg-white hover:bg-[#12B981]/10 text-[#0E9B6C] font-semibold border border-[#12B981]/30 rounded-lg shadow-2xs cursor-pointer transition-colors"
                   >
                     ✓ Perfect Match ($399.00 New)
                   </button>
@@ -817,7 +802,7 @@ export default function CustomerPortalPage() {
                     onClick={() => {
                       setSimPriceDollars('449.00'); // $50 hidden fee surge
                     }}
-                    className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 font-semibold border border-rose-300 rounded-lg shadow-xs"
+                    className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 font-semibold border border-red-200 rounded-lg shadow-2xs cursor-pointer transition-colors"
                   >
                     ⚡ Bait-and-Switch Price Surge ($449.00)
                   </button>
@@ -827,7 +812,7 @@ export default function CustomerPortalPage() {
                     onClick={() => {
                       setSimCondition('refurbished'); // Downgraded condition
                     }}
-                    className="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-700 font-semibold border border-amber-300 rounded-lg shadow-xs"
+                    className="px-2.5 py-1 bg-white hover:bg-[#EAA33A]/10 text-[#A06813] font-semibold border border-[#EAA33A]/30 rounded-lg shadow-2xs cursor-pointer transition-colors"
                   >
                     ⚡ Refurbished Substitution Downgrade
                   </button>
@@ -837,7 +822,7 @@ export default function CustomerPortalPage() {
                     onClick={() => {
                       setSimShippingDollars('45.00'); // Shipping fee surge
                     }}
-                    className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 font-semibold border border-rose-300 rounded-lg shadow-xs"
+                    className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 font-semibold border border-red-200 rounded-lg shadow-2xs cursor-pointer transition-colors"
                   >
                     ⚡ Hidden Shipping Fee Surge ($45.00)
                   </button>
@@ -845,7 +830,7 @@ export default function CustomerPortalPage() {
               </div>
 
               {verifyError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium">
                   {verifyError}
                 </div>
               )}
@@ -854,7 +839,7 @@ export default function CustomerPortalPage() {
               <form onSubmit={handleVerifySimulator} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#101D35] mb-1">
                       Checkout Merchant ID (Numeric)
                     </label>
                     <input
@@ -863,12 +848,12 @@ export default function CustomerPortalPage() {
                       required
                       value={simMerchantId}
                       onChange={(e) => setSimMerchantId(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#101D35] mb-1">
                       Checkout Unit Price ($)
                     </label>
                     <input
@@ -877,12 +862,12 @@ export default function CustomerPortalPage() {
                       required
                       value={simPriceDollars}
                       onChange={(e) => setSimPriceDollars(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-semibold"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] font-semibold text-[#101D35]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#101D35] mb-1">
                       Shipping Amount ($)
                     </label>
                     <input
@@ -891,20 +876,20 @@ export default function CustomerPortalPage() {
                       required
                       value={simShippingDollars}
                       onChange={(e) => setSimShippingDollars(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#101D35] mb-1">
                       Condition at Checkout
                     </label>
                     <select
                       value={simCondition}
                       onChange={(e) => setSimCondition(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] bg-white"
                     >
                       <option value="new">Brand New</option>
                       <option value="refurbished">Refurbished / Used</option>
@@ -912,26 +897,26 @@ export default function CustomerPortalPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#101D35] mb-1">
                       Brand at Checkout
                     </label>
                     <input
                       type="text"
                       value={simBrand}
                       onChange={(e) => setSimBrand(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-[#101D35] mb-1">
                       Model at Checkout
                     </label>
                     <input
                       type="text"
                       value={simModel}
                       onChange={(e) => setSimModel(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB]"
                     />
                   </div>
                 </div>
@@ -940,7 +925,7 @@ export default function CustomerPortalPage() {
                   <button
                     type="submit"
                     disabled={verifying}
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                    className="px-6 py-2.5 bg-[#176BEB] hover:bg-[#1258C2] text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
                     {verifying ? 'Evaluating Semantic Rules...' : 'Execute Pre-Capture Verification →'}
                   </button>
@@ -950,25 +935,25 @@ export default function CustomerPortalPage() {
 
             {/* Verification Result Display */}
             {verificationResult && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden space-y-6 p-6 sm:p-8 animate-in fade-in">
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden space-y-6 p-6 sm:p-8 animate-in fade-in">
                 {/* Verdict Banner */}
                 <div
                   className={`p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                     verificationResult.verdict === 'MATCH'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      ? 'bg-[#12B981]/10 border-[#12B981]/30 text-[#0E9B6C]'
                       : verificationResult.verdict === 'MISMATCH'
-                      ? 'bg-rose-50 border-rose-200 text-rose-900'
-                      : 'bg-amber-50 border-amber-200 text-amber-900'
+                      ? 'bg-red-50 border-red-200 text-red-900'
+                      : 'bg-[#EAA33A]/10 border-[#EAA33A]/30 text-[#8C580A]'
                   }`}
                 >
                   <div className="flex items-center gap-4">
                     <div
                       className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold ${
                         verificationResult.verdict === 'MATCH'
-                          ? 'bg-emerald-600 text-white'
+                          ? 'bg-[#12B981] text-white'
                           : verificationResult.verdict === 'MISMATCH'
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-amber-600 text-white'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-[#EAA33A] text-white'
                       }`}
                     >
                       {verificationResult.verdict === 'MATCH' ? '✓' : verificationResult.verdict === 'MISMATCH' ? '✗' : '⚠'}
@@ -1006,19 +991,19 @@ export default function CustomerPortalPage() {
 
                 {/* Discrepancies Table */}
                 <div className="space-y-3">
-                  <h3 className="font-bold text-slate-900 text-sm">
+                  <h3 className="font-bold text-[#101D35] text-sm">
                     Discrepancy Analysis Breakdown ({verificationResult.discrepancies?.length || 0})
                   </h3>
 
                   {(!verificationResult.discrepancies || verificationResult.discrepancies.length === 0) ? (
-                    <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 text-xs text-emerald-800 flex items-center gap-2">
+                    <div className="p-4 bg-[#12B981]/10 rounded-xl border border-[#12B981]/20 text-xs text-[#0E9B6C] flex items-center gap-2 font-medium">
                       <span>✓</span>
                       Zero discrepancies detected across price, condition, currency, merchant identity, and shipping SLA.
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
+                        <thead className="bg-[#F3F6FB] text-slate-500 uppercase font-semibold border-b border-slate-200">
                           <tr>
                             <th className="px-4 py-2.5">Severity</th>
                             <th className="px-4 py-2.5">Category</th>
@@ -1034,16 +1019,16 @@ export default function CustomerPortalPage() {
                                 <span
                                   className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] ${
                                     flag.severity === 'critical'
-                                      ? 'bg-rose-100 text-rose-800'
+                                      ? 'bg-red-100 text-red-800'
                                       : flag.severity === 'warning'
-                                      ? 'bg-amber-100 text-amber-800'
-                                      : 'bg-blue-100 text-blue-800'
+                                      ? 'bg-[#EAA33A]/15 text-[#8C580A]'
+                                      : 'bg-[#176BEB]/10 text-[#176BEB]'
                                   }`}
                                 >
                                   {flag.severity}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 font-semibold uppercase text-slate-700">
+                              <td className="px-4 py-3 font-semibold uppercase text-[#101D35]">
                                 {flag.category}
                               </td>
                               <td className="px-4 py-3 text-slate-800">
@@ -1052,7 +1037,7 @@ export default function CustomerPortalPage() {
                               <td className="px-4 py-3 font-mono text-slate-600">
                                 {typeof flag.intended_value === 'object' ? JSON.stringify(flag.intended_value) : String(flag.intended_value ?? '—')}
                               </td>
-                              <td className="px-4 py-3 font-mono font-bold text-slate-900">
+                              <td className="px-4 py-3 font-mono font-bold text-[#101D35]">
                                 {typeof flag.actual_value === 'object' ? JSON.stringify(flag.actual_value) : String(flag.actual_value ?? '—')}
                               </td>
                             </tr>
@@ -1065,22 +1050,22 @@ export default function CustomerPortalPage() {
 
                 {/* Pre-capture Hold Resolution Actions */}
                 {verificationResult.hold_payment_capture && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
-                    <div className="text-xs text-amber-900 font-semibold">
+                  <div className="p-4 bg-[#EAA33A]/10 border border-[#EAA33A]/30 rounded-xl space-y-3">
+                    <div className="text-xs text-[#8C580A] font-semibold">
                       Action Required: This payment is held at the gateway. Choose how to proceed:
                     </div>
                     <div className="flex gap-3">
                       <button
                         onClick={() => handleConfirmHold(verificationResult.id)}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                        className="px-4 py-2 bg-[#12B981] hover:bg-[#0E9B6C] text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer transition-colors"
                       >
-                        ✓ Accept Discrepancy & Release Capture
+                        ✓ Accept Discrepancy &amp; Release Capture
                       </button>
                       <button
                         onClick={() => handleRejectHold(verificationResult.id)}
-                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer transition-colors"
                       >
-                        ✗ Reject Checkout & Void Payment
+                        ✗ Reject Checkout &amp; Void Payment
                       </button>
                     </div>
                   </div>
@@ -1095,26 +1080,26 @@ export default function CustomerPortalPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-slate-900">Held Capture Authorizations</h2>
+                <h2 className="text-base font-bold text-[#101D35]">Held Capture Authorizations</h2>
                 <p className="text-xs text-slate-500">
                   Transactions held by IntentGuard awaiting your explicit confirmation or rejection.
                 </p>
               </div>
               <button
                 onClick={loadHolds}
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                className="text-xs text-[#176BEB] hover:text-[#1258C2] font-semibold cursor-pointer"
               >
                 🔄 Refresh
               </button>
             </div>
 
             {loadingHolds ? (
-              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200">
+              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200/80">
                 Loading held transactions...
               </div>
             ) : pendingHolds.length === 0 ? (
-              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200 space-y-2">
-                <p>No transactions currently on capture hold.</p>
+              <div className="p-12 text-center text-sm text-slate-500 bg-white rounded-2xl border border-slate-200/80 space-y-2">
+                <p className="font-semibold text-[#101D35]">No transactions currently on capture hold.</p>
                 <p className="text-xs text-slate-400">
                   When a checkout deviates from your intent, you will see a prompt here to approve or void it.
                 </p>
@@ -1124,23 +1109,23 @@ export default function CustomerPortalPage() {
                 {pendingHolds.map((hold) => (
                   <div
                     key={hold.id}
-                    className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm space-y-4"
+                    className="bg-white p-5 rounded-2xl border border-[#EAA33A]/40 shadow-xs space-y-4"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded text-xs">
+                          <span className="px-2 py-0.5 bg-[#EAA33A]/15 text-[#8C580A] font-bold rounded text-xs">
                             Hold #{hold.id}
                           </span>
                           <span className="text-xs font-semibold text-slate-600">
                             Intent Reference #{hold.purchase_intent_id}
                           </span>
-                          <span className="text-xs font-bold text-rose-600 uppercase">
+                          <span className="text-xs font-bold text-red-600 uppercase">
                             Verdict: {hold.verdict}
                           </span>
                         </div>
                         <div className="text-xs text-slate-600 mt-2">
-                          Confidence Score: <strong>{(hold.confidence_score * 100).toFixed(1)}%</strong>
+                          Confidence Score: <strong className="text-[#101D35]">{(hold.confidence_score * 100).toFixed(1)}%</strong>
                         </div>
                         <div className="text-xs text-slate-500 mt-1">
                           Discrepancies: {hold.discrepancies?.length || 0} flagged item(s)
@@ -1150,15 +1135,15 @@ export default function CustomerPortalPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleConfirmHold(hold.id)}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                          className="px-4 py-2 bg-[#12B981] hover:bg-[#0E9B6C] text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer transition-colors"
                         >
-                          ✓ Confirm & Capture
+                          ✓ Confirm &amp; Capture
                         </button>
                         <button
                           onClick={() => handleRejectHold(hold.id)}
-                          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer transition-colors"
                         >
-                          ✗ Reject & Void
+                          ✗ Reject &amp; Void
                         </button>
                       </div>
                     </div>
@@ -1172,11 +1157,11 @@ export default function CustomerPortalPage() {
 
       {/* Dispute Modal */}
       {disputeIntent && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#101D35]/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden text-[#101D35]">
+            <div className="px-6 py-4 border-b border-slate-200 bg-[#F3F6FB] flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">
+                <h3 className="font-bold text-[#101D35] text-sm">
                   Open Integrity Dispute: Intent #{disputeIntent.id}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
@@ -1185,7 +1170,7 @@ export default function CustomerPortalPage() {
               </div>
               <button
                 onClick={() => setDisputeIntent(null)}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1 cursor-pointer leading-none"
               >
                 ×
               </button>
@@ -1193,19 +1178,19 @@ export default function CustomerPortalPage() {
 
             <form onSubmit={handleSubmitDispute} className="p-6 space-y-4">
               {disputeMessage && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg">
+                <div className="p-3 bg-[#12B981]/10 border border-[#12B981]/30 text-[#0E9B6C] text-xs rounded-lg font-medium">
                   {disputeMessage}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#101D35] mb-1">
                   Dispute Category *
                 </label>
                 <select
                   value={disputeCategory}
                   onChange={(e) => setDisputeCategory(e.target.value as DisputeCategory)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none bg-white"
                 >
                   <option value="item_not_as_described">Item Not As Described (Spec Drift)</option>
                   <option value="pricing_discrepancy">Pricing Discrepancy / Hidden Fee Surge</option>
@@ -1217,7 +1202,7 @@ export default function CustomerPortalPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#101D35] mb-1">
                   Claimed Refund Amount ($) *
                 </label>
                 <input
@@ -1226,13 +1211,13 @@ export default function CustomerPortalPage() {
                   required
                   value={disputeClaimDollars}
                   onChange={(e) => setDisputeClaimDollars(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Dispute Description & Evidence Details *
+                <label className="block text-xs font-semibold text-[#101D35] mb-1">
+                  Dispute Description &amp; Evidence Details *
                 </label>
                 <textarea
                   required
@@ -1240,7 +1225,7 @@ export default function CustomerPortalPage() {
                   value={disputeDescription}
                   onChange={(e) => setDisputeDescription(e.target.value)}
                   placeholder="Explain exactly how the fulfilled item or checkout deviated from your intent..."
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none"
                 />
               </div>
 
@@ -1248,14 +1233,14 @@ export default function CustomerPortalPage() {
                 <button
                   type="button"
                   onClick={() => setDisputeIntent(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingDispute}
-                  className="px-5 py-2 text-xs font-semibold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50 shadow-sm"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 shadow-xs transition-colors cursor-pointer"
                 >
                   {submittingDispute ? 'Filing Dispute...' : 'Submit Formal Dispute'}
                 </button>

@@ -96,17 +96,17 @@ export function CheckoutFooter() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F3F6FB] text-[#101D35] py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-10">
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/70 border border-cyan-800/60 text-cyan-400 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#176BEB]/10 border border-[#176BEB]/30 text-[#176BEB] text-xs font-semibold">
             <SparklesIcon className="w-3.5 h-3.5" /> Commercial Adoption &amp; Merchant Integration
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#101D35]">
             IntentGuard Trust Seal Widget
           </h1>
-          <p className="text-slate-400 text-sm max-w-2xl mx-auto">
+          <p className="text-slate-600 text-sm max-w-2xl mx-auto">
             Embed cryptographic purchase integrity and pre-capture payment protection directly into your checkout page.
             Displays live merchant verification and 100-point compliance telemetry.
           </p>
@@ -115,98 +115,98 @@ export function CheckoutFooter() {
         {/* Live Widget Showcase */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Card 1: Standard Badge */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Standard Badge</span>
-              <span className="text-[11px] text-cyan-400 font-mono">variant="standard"</span>
+              <span className="text-xs font-bold text-[#101D35] uppercase tracking-wider">Standard Badge</span>
+              <span className="text-[11px] text-[#176BEB] font-mono">variant="standard"</span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Ideal beside payment buttons or in checkout summary footers.
             </p>
-            <div className="p-4 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-center justify-center min-h-[90px]">
+            <div className="p-4 bg-[#F3F6FB] rounded-xl border border-slate-200/80 flex items-center justify-center min-h-[90px]">
               <IntentGuardSeal merchantId={selectedMerchantId} variant="standard" />
             </div>
           </div>
 
           {/* Card 2: Compact Badge */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Compact Pill</span>
-              <span className="text-[11px] text-cyan-400 font-mono">variant="compact"</span>
+              <span className="text-xs font-bold text-[#101D35] uppercase tracking-wider">Compact Pill</span>
+              <span className="text-[11px] text-[#176BEB] font-mono">variant="compact"</span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Designed for navigation bars, mobile checkout bars, or product pages.
             </p>
-            <div className="p-4 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-center justify-center min-h-[90px]">
+            <div className="p-4 bg-[#F3F6FB] rounded-xl border border-slate-200/80 flex items-center justify-center min-h-[90px]">
               <IntentGuardSeal merchantId={selectedMerchantId} variant="compact" />
             </div>
           </div>
 
           {/* Card 3: Expanded Card */}
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expanded Summary</span>
-              <span className="text-[11px] text-cyan-400 font-mono">variant="expanded"</span>
+              <span className="text-xs font-bold text-[#101D35] uppercase tracking-wider">Expanded Summary</span>
+              <span className="text-[11px] text-[#176BEB] font-mono">variant="expanded"</span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Comprehensive trust badge for cart drawers and checkout sidebars.
             </p>
-            <div className="p-2 bg-slate-950/70 rounded-xl border border-slate-800/80">
+            <div className="p-2 bg-[#F3F6FB] rounded-xl border border-slate-200/80">
               <IntentGuardSeal merchantId={selectedMerchantId} variant="expanded" />
             </div>
           </div>
         </div>
 
         {/* Interactive Simulated E-Commerce Checkout Flow */}
-        <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-700/60 flex items-center justify-center">
-                <ShoppingBagIcon className="w-5 h-5 text-cyan-400" />
+              <div className="w-10 h-10 rounded-xl bg-[#EEF5FF] border border-[#BFDBFE] flex items-center justify-center text-[#176BEB]">
+                <ShoppingBagIcon className="w-5 h-5 text-[#176BEB]" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Live E-Commerce Checkout Simulation</h3>
-                <p className="text-xs text-slate-400">Experience how customers see pre-capture intent verification at checkout.</p>
+                <h3 className="text-lg font-bold text-[#101D35]">Live E-Commerce Checkout Simulation</h3>
+                <p className="text-xs text-slate-500">Experience how customers see pre-capture intent verification at checkout.</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Merchant ID:</span>
+              <span className="text-xs text-slate-500">Merchant ID:</span>
               <input
                 type="text"
                 value={selectedMerchantId}
                 onChange={(e) => setSelectedMerchantId(e.target.value)}
-                className="px-2.5 py-1 text-xs font-mono bg-slate-950 border border-slate-700 rounded-lg text-cyan-400 focus:outline-none focus:border-cyan-500"
+                className="px-2.5 py-1 text-xs font-mono bg-[#F3F6FB] border border-slate-300 rounded-lg text-[#176BEB] font-semibold focus:outline-none focus:ring-2 focus:ring-[#176BEB]"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Order Summary */}
-            <div className="space-y-4 bg-slate-950/60 p-5 rounded-xl border border-slate-800/80">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Items in Cart</h4>
-              <div className="flex items-center justify-between py-2 border-b border-slate-800/60 text-sm">
+            <div className="space-y-4 bg-[#F3F6FB] p-5 rounded-xl border border-slate-200">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Items in Cart</h4>
+              <div className="flex items-center justify-between py-2 border-b border-slate-200 text-sm">
                 <div>
-                  <div className="font-semibold text-white">Sony WH-1000XM5 Wireless Headphones</div>
-                  <div className="text-xs text-slate-400">Condition: New &bull; Colour: Black &bull; Qty: 1</div>
+                  <div className="font-semibold text-[#101D35]">Sony WH-1000XM5 Wireless Headphones</div>
+                  <div className="text-xs text-slate-500">Condition: New &bull; Colour: Black &bull; Qty: 1</div>
                 </div>
-                <div className="font-mono text-cyan-400 font-bold">$349.99</div>
+                <div className="font-mono text-[#176BEB] font-bold">$349.99</div>
               </div>
-              <div className="space-y-1.5 text-xs text-slate-400 pt-2">
+              <div className="space-y-1.5 text-xs text-slate-500 pt-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span className="text-slate-200 font-mono">$349.99</span>
+                  <span className="text-[#101D35] font-mono font-semibold">$349.99</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping (Standard):</span>
-                  <span className="text-slate-200 font-mono">$0.00</span>
+                  <span className="text-[#101D35] font-mono font-semibold">$0.00</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Estimated Tax:</span>
-                  <span className="text-slate-200 font-mono">$28.00</span>
+                  <span className="text-[#101D35] font-mono font-semibold">$28.00</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
+                <div className="flex justify-between text-sm font-bold text-[#101D35] pt-2 border-t border-slate-200">
                   <span>Total Due:</span>
-                  <span className="text-emerald-400 font-mono">$377.99</span>
+                  <span className="text-[#12B981] font-mono font-bold">$377.99</span>
                 </div>
               </div>
             </div>
@@ -215,27 +215,27 @@ export function CheckoutFooter() {
             <div className="space-y-5 flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300">Payment Authorization</span>
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                    <LockIcon className="w-3 h-3" /> TLS 1.3 / OpenSSL
+                  <span className="text-xs font-semibold text-[#101D35]">Payment Authorization</span>
+                  <span className="flex items-center gap-1 text-[11px] text-[#12B981] font-semibold">
+                    <LockIcon className="w-3 h-3" /> TLS 1.3 / OpenSSL SHA-256
                   </span>
                 </div>
                 <button
                   type="button"
-                  className="w-full py-3 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl bg-[#EAA33A] hover:bg-[#D68F26] text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                 >
-                  <CreditCardIcon className="w-4 h-4 text-slate-950" /> Authorize with PayPal Two-Step
+                  <CreditCardIcon className="w-4 h-4 text-white" /> Authorize with PayPal Two-Step
                 </button>
               </div>
 
               {/* Embedded Trust Seal in Checkout */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-cyan-900/40 space-y-3">
+              <div className="p-4 rounded-xl bg-[#F3F6FB] border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">Integrity Assurance:</span>
-                  <span className="text-[10px] text-cyan-400 font-mono">IG-TDE-INTERCEPT-ON</span>
+                  <span className="text-[11px] text-slate-500">Integrity Assurance:</span>
+                  <span className="text-[10px] text-[#176BEB] font-mono font-semibold">IG-TDE-INTERCEPT-ON</span>
                 </div>
                 <IntentGuardSeal merchantId={selectedMerchantId} variant="standard" />
-                <p className="text-[11px] text-slate-400 leading-tight">
+                <p className="text-[11px] text-slate-500 leading-tight">
                   Protected by IntentGuard SPIE: payment capture will be held automatically if the merchant charges hidden fees or substitutes unapproved items.
                 </p>
               </div>
@@ -244,63 +244,63 @@ export function CheckoutFooter() {
         </div>
 
         {/* Embed Code Snippets */}
-        <div className="p-6 sm:p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-6">
+        <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-6">
           <div className="flex items-center gap-2.5">
-            <CodeIcon className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-lg font-bold text-white">Merchant Embed Code Snippets</h3>
+            <CodeIcon className="w-5 h-5 text-[#176BEB]" />
+            <h3 className="text-lg font-bold text-[#101D35]">Merchant Embed Code Snippets</h3>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Copy and paste into your Shopify liquid template, WooCommerce checkout footer, or modern React / Next.js app.
           </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Snippet 1: HTML / Web Component */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
+              <div className="flex items-center justify-between text-xs text-[#101D35] font-semibold">
                 <span>HTML / Web Component</span>
                 <button
                   onClick={() => copyToClipboard(scriptTagCode, 'html')}
-                  className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#176BEB] hover:text-[#1258C2] cursor-pointer"
                 >
-                  {copiedType === 'html' ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                  {copiedType === 'html' ? <CheckIcon className="w-3.5 h-3.5 text-[#12B981]" /> : <CopyIcon className="w-3.5 h-3.5" />}
                   {copiedType === 'html' ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <pre className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono overflow-x-auto">
+              <pre className="p-3.5 bg-[#101D35] text-slate-200 rounded-xl border border-[#1C2C4E] text-[11px] font-mono overflow-x-auto">
                 {scriptTagCode}
               </pre>
             </div>
 
             {/* Snippet 2: Shopify */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
+              <div className="flex items-center justify-between text-xs text-[#101D35] font-semibold">
                 <span>Shopify Liquid</span>
                 <button
                   onClick={() => copyToClipboard(shopifyLiquidCode, 'shopify')}
-                  className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#176BEB] hover:text-[#1258C2] cursor-pointer"
                 >
-                  {copiedType === 'shopify' ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                  {copiedType === 'shopify' ? <CheckIcon className="w-3.5 h-3.5 text-[#12B981]" /> : <CopyIcon className="w-3.5 h-3.5" />}
                   {copiedType === 'shopify' ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <pre className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono overflow-x-auto">
+              <pre className="p-3.5 bg-[#101D35] text-slate-200 rounded-xl border border-[#1C2C4E] text-[11px] font-mono overflow-x-auto">
                 {shopifyLiquidCode}
               </pre>
             </div>
 
             {/* Snippet 3: React / Next.js */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-300 font-semibold">
+              <div className="flex items-center justify-between text-xs text-[#101D35] font-semibold">
                 <span>React / Next.js</span>
                 <button
                   onClick={() => copyToClipboard(reactSnippetCode, 'react')}
-                  className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#176BEB] hover:text-[#1258C2] cursor-pointer"
                 >
-                  {copiedType === 'react' ? <CheckIcon className="w-3.5 h-3.5 text-emerald-400" /> : <CopyIcon className="w-3.5 h-3.5" />}
+                  {copiedType === 'react' ? <CheckIcon className="w-3.5 h-3.5 text-[#12B981]" /> : <CopyIcon className="w-3.5 h-3.5" />}
                   {copiedType === 'react' ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <pre className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono overflow-x-auto">
+              <pre className="p-3.5 bg-[#101D35] text-slate-200 rounded-xl border border-[#1C2C4E] text-[11px] font-mono overflow-x-auto">
                 {reactSnippetCode}
               </pre>
             </div>

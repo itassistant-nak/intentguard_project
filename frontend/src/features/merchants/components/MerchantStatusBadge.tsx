@@ -11,33 +11,33 @@ export function MerchantStatusBadge({ status }: Props) {
   const configs: Record<MerchantStatus, { label: string; bg: string; text: string; dot: string }> = {
     pending_review: {
       label: 'Pending Review',
-      bg: 'bg-amber-50 border-amber-200',
-      text: 'text-amber-700',
-      dot: 'bg-amber-400',
+      bg: 'bg-[#EAA33A]/10 border-[#EAA33A]/30',
+      text: 'text-[#A06813]',
+      dot: 'bg-[#EAA33A]',
     },
     under_review: {
-      label: 'Under Review',
-      bg: 'bg-blue-50 border-blue-200',
-      text: 'text-blue-700',
-      dot: 'bg-blue-400',
+      label: 'Under Administrative Review',
+      bg: 'bg-[#EAA33A]/15 border-[#EAA33A]/40',
+      text: 'text-[#8C580A]',
+      dot: 'bg-[#EAA33A]',
     },
     verified: {
       label: 'IntentGuard Verified',
-      bg: 'bg-emerald-50 border-emerald-200',
-      text: 'text-emerald-700',
-      dot: 'bg-emerald-500',
+      bg: 'bg-[#12B981]/10 border-[#12B981]/30',
+      text: 'text-[#0E9B6C]',
+      dot: 'bg-[#12B981]',
     },
     rejected: {
       label: 'Application Rejected',
-      bg: 'bg-rose-50 border-rose-200',
-      text: 'text-rose-700',
-      dot: 'bg-rose-500',
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-700',
+      dot: 'bg-red-500',
     },
     suspended: {
       label: 'Account Suspended',
-      bg: 'bg-slate-100 border-slate-300',
-      text: 'text-slate-700',
-      dot: 'bg-slate-500',
+      bg: 'bg-red-100/70 border-red-300',
+      text: 'text-red-800',
+      dot: 'bg-red-600',
     },
   };
 
@@ -52,3 +52,5 @@ export function MerchantStatusBadge({ status }: Props) {
     </span>
   );
 }
+
+export default MerchantStatusBadge;

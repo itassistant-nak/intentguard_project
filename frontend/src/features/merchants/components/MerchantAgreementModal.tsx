@@ -54,16 +54,16 @@ export function MerchantAgreementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#101D35]/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="relative bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-slate-200 bg-[#F3F6FB] flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700 rounded">
+              <span className="px-2.5 py-0.5 text-xs font-bold bg-[#176BEB]/10 text-[#176BEB] border border-[#176BEB]/20 rounded-full">
                 Version {agreement.version}
               </span>
-              <h2 className="text-lg font-bold text-slate-900">{agreement.title}</h2>
+              <h2 className="text-lg font-bold text-[#101D35]">{agreement.title}</h2>
             </div>
             <p className="text-xs text-slate-500 mt-1 font-mono break-all">
               Cryptographic SHA-256 Digest: {agreement.content_hash}
@@ -71,7 +71,7 @@ export function MerchantAgreementModal({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+            className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1 cursor-pointer leading-none"
           >
             ×
           </button>
@@ -80,57 +80,57 @@ export function MerchantAgreementModal({
         {/* Policy Documents */}
         <div className="p-6 overflow-y-auto space-y-6 text-sm text-slate-700 divide-y divide-slate-100">
           <div className="pt-2">
-            <h3 className="font-semibold text-slate-900 text-base flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">1</span>
+            <h3 className="font-semibold text-[#101D35] text-base flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#176BEB]/10 text-[#176BEB] flex items-center justify-center text-xs font-bold">1</span>
               Product Accuracy Policy
             </h3>
-            <p className="mt-2 text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-200/80 leading-relaxed">
+            <p className="mt-2 text-slate-600 bg-[#F3F6FB] p-4 rounded-xl border border-slate-200/80 leading-relaxed text-xs sm:text-sm">
               {agreement.policies.product_accuracy}
             </p>
           </div>
 
           <div className="pt-4">
-            <h3 className="font-semibold text-slate-900 text-base flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">2</span>
-              Shipping & Delivery SLA Policy
+            <h3 className="font-semibold text-[#101D35] text-base flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#176BEB]/10 text-[#176BEB] flex items-center justify-center text-xs font-bold">2</span>
+              Shipping &amp; Delivery SLA Policy
             </h3>
-            <p className="mt-2 text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-200/80 leading-relaxed">
+            <p className="mt-2 text-slate-600 bg-[#F3F6FB] p-4 rounded-xl border border-slate-200/80 leading-relaxed text-xs sm:text-sm">
               {agreement.policies.shipping_delivery}
             </p>
           </div>
 
           <div className="pt-4">
-            <h3 className="font-semibold text-slate-900 text-base flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">3</span>
+            <h3 className="font-semibold text-[#101D35] text-base flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#176BEB]/10 text-[#176BEB] flex items-center justify-center text-xs font-bold">3</span>
               Authorized Substitution Protocol
             </h3>
-            <p className="mt-2 text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-200/80 leading-relaxed">
+            <p className="mt-2 text-slate-600 bg-[#F3F6FB] p-4 rounded-xl border border-slate-200/80 leading-relaxed text-xs sm:text-sm">
               {agreement.policies.substitution}
             </p>
           </div>
 
           <div className="pt-4">
-            <h3 className="font-semibold text-slate-900 text-base flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">4</span>
-              Refund & Express Replacement Guarantee
+            <h3 className="font-semibold text-[#101D35] text-base flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-[#176BEB]/10 text-[#176BEB] flex items-center justify-center text-xs font-bold">4</span>
+              Refund &amp; Express Replacement Guarantee
             </h3>
-            <p className="mt-2 text-slate-600 bg-slate-50 p-4 rounded-lg border border-slate-200/80 leading-relaxed">
+            <p className="mt-2 text-slate-600 bg-[#F3F6FB] p-4 rounded-xl border border-slate-200/80 leading-relaxed text-xs sm:text-sm">
               {agreement.policies.refund_replacement}
             </p>
           </div>
         </div>
 
         {/* Digital Signature Form */}
-        <form onSubmit={handleSubmit} className="p-6 border-t border-slate-200 bg-slate-50 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 border-t border-slate-200 bg-[#F3F6FB] space-y-4">
           {error && (
-            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg font-medium">
               {error}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#101D35] mb-1">
                 Authorized Signatory Full Name
               </label>
               <input
@@ -139,11 +139,11 @@ export function MerchantAgreementModal({
                 value={signatoryName}
                 onChange={(e) => setSignatoryName(e.target.value)}
                 placeholder="e.g. Sarah Jenkins"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none bg-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[#101D35] mb-1">
                 Signatory Corporate Title
               </label>
               <input
@@ -152,7 +152,7 @@ export function MerchantAgreementModal({
                 value={signatoryTitle}
                 onChange={(e) => setSignatoryTitle(e.target.value)}
                 placeholder="e.g. Managing Director / CEO"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#176BEB] focus:border-[#176BEB] focus:outline-none bg-white"
               />
             </div>
           </div>
@@ -163,7 +163,7 @@ export function MerchantAgreementModal({
               id="agree-checkbox"
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-1 rounded text-indigo-600 focus:ring-indigo-500"
+              className="mt-1 rounded accent-[#176BEB] focus:ring-[#176BEB]"
             />
             <label htmlFor="agree-checkbox" className="text-xs text-slate-600 leading-normal">
               I certify under penalty of contract breach that I am legally authorized to bind this merchant entity to the terms of the IntentGuard Agreement version {agreement.version} and its cryptographic digest.
@@ -174,14 +174,14 @@ export function MerchantAgreementModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+              className="px-5 py-2 text-sm font-semibold text-white bg-[#176BEB] hover:bg-[#1258C2] rounded-lg disabled:opacity-50 shadow-xs transition-colors cursor-pointer"
             >
               {submitting ? 'Cryptographically Signing...' : 'Digitally Execute Agreement'}
             </button>
@@ -191,3 +191,5 @@ export function MerchantAgreementModal({
     </div>
   );
 }
+
+export default MerchantAgreementModal;

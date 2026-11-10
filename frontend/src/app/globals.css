@@ -1,26 +1,125 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F3F6FB;
+  --foreground: #101D35;
+
+  /* IntentGuard Core Brand Tokens */
+  --ig-navy: #101D35;
+  --ig-navy-dark: #0A1324;
+  --ig-navy-light: #1A2C4E;
+
+  --ig-trust-blue: #176BEB;
+  --ig-trust-blue-hover: #1258C2;
+  --ig-trust-blue-light: #EEF5FF;
+
+  --ig-security-green: #12B981;
+  --ig-security-green-hover: #0E9B6C;
+  --ig-security-green-light: #ECFDF5;
+
+  --ig-warning-amber: #EAA33A;
+  --ig-warning-amber-hover: #D68F26;
+  --ig-warning-amber-light: #FEF9EE;
+
+  --ig-danger-red: #EF4444;
+  --ig-danger-red-hover: #DC2626;
+  --ig-danger-red-light: #FEF2F2;
+
+  --ig-soft-bg: #F3F6FB;
+  --ig-card-bg: #FFFFFF;
+  --ig-border-subtle: #E2E8F0;
+  --ig-border-strong: #CBD5E1;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  --color-navy: #101D35;
+  --color-navy-dark: #0A1324;
+  --color-navy-light: #1A2C4E;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-trust: #176BEB;
+  --color-trust-hover: #1258C2;
+  --color-trust-light: #EEF5FF;
+
+  --color-security: #12B981;
+  --color-security-hover: #0E9B6C;
+  --color-security-light: #ECFDF5;
+
+  --color-warning: #EAA33A;
+  --color-warning-hover: #D68F26;
+  --color-warning-light: #FEF9EE;
+
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-danger-light: #FEF2F2;
+
+  --color-soft-bg: #F3F6FB;
+  --color-card-white: #FFFFFF;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Common Fintech Utility Classes */
+.bg-soft {
+  background-color: var(--ig-soft-bg);
+}
+
+.bg-navy {
+  background-color: var(--ig-navy);
+}
+
+.text-navy {
+  color: var(--ig-navy);
+}
+
+.border-navy {
+  border-color: var(--ig-navy);
+}
+
+.bg-trust {
+  background-color: var(--ig-trust-blue);
+}
+
+.text-trust {
+  color: var(--ig-trust-blue);
+}
+
+.border-trust {
+  border-color: var(--ig-trust-blue);
+}
+
+.bg-security {
+  background-color: var(--ig-security-green);
+}
+
+.text-security {
+  color: var(--ig-security-green);
+}
+
+.border-security {
+  border-color: var(--ig-security-green);
+}
+
+.bg-warning-amber {
+  background-color: var(--ig-warning-amber);
+}
+
+.text-warning-amber {
+  color: var(--ig-warning-amber);
+}
+
+.border-warning-amber {
+  border-color: var(--ig-warning-amber);
+}
+
+.card-fintech {
+  background-color: #FFFFFF;
+  border: 1px solid var(--ig-border-subtle);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(16, 29, 53, 0.04), 0 1px 2px -1px rgba(16, 29, 53, 0.04);
 }

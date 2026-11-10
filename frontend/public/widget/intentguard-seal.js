@@ -4,7 +4,7 @@
  * 
  * Usage:
  *   <script src="https://cdn.intentguard.internal/widget/intentguard-seal.js" async></script>
- *   <intentguard-seal merchant-id="IG-MCH-APEX0001" theme="dark" size="medium"></intentguard-seal>
+ *   <intentguard-seal merchant-id="IG-MCH-APEX0001" theme="light" size="medium"></intentguard-seal>
  * 
  * Or with standard data attributes:
  *   <div class="intentguard-seal-badge" data-merchant-id="IG-MCH-APEX0001"></div>
@@ -26,16 +26,16 @@
       cursor: pointer;
       user-select: none;
       transition: all 0.2s ease;
-      background: #0f172a;
-      color: #f8fafc;
-      border: 1px solid #334155;
+      background: #FFFFFF;
+      color: #101D35;
+      border: 1px solid #E2E8F0;
       border-radius: 9999px;
       padding: 6px 14px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 1px 3px rgba(16, 29, 53, 0.08);
     }
     .ig-seal-container:hover {
-      border-color: #38bdf8;
-      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+      border-color: #176BEB;
+      box-shadow: 0 4px 12px rgba(23, 107, 235, 0.15);
       transform: translateY(-1px);
     }
     .ig-seal-icon {
@@ -46,25 +46,25 @@
     .ig-seal-text {
       display: flex;
       flex-direction: column;
-      line-height: 1.1;
+      line-height: 1.15;
     }
     .ig-seal-title {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: #38bdf8;
+      color: #101D35;
     }
     .ig-seal-sub {
       font-size: 10px;
-      color: #94a3b8;
+      color: #64748B;
     }
     .ig-seal-score {
       font-size: 10px;
       font-weight: 700;
-      background: #064e3b;
-      color: #34d399;
-      border: 1px solid #059669;
+      background: #ECFDF5;
+      color: #0E9B6C;
+      border: 1px solid rgba(18, 185, 129, 0.3);
       padding: 1px 6px;
       border-radius: 9999px;
       margin-left: 4px;
@@ -75,7 +75,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(16, 29, 53, 0.65);
       backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
@@ -84,14 +84,14 @@
       animation: ig-fade-in 0.2s ease-out;
     }
     .ig-modal-box {
-      background: #0f172a;
-      border: 1px solid #334155;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
       border-radius: 16px;
       width: 90%;
       max-width: 480px;
       padding: 24px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-      color: #f8fafc;
+      box-shadow: 0 20px 25px -5px rgba(16, 29, 53, 0.15), 0 8px 10px -6px rgba(16, 29, 53, 0.1);
+      color: #101D35;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       position: relative;
     }
@@ -99,28 +99,29 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid #1e293b;
+      border-bottom: 1px solid #E2E8F0;
       padding-bottom: 14px;
       margin-bottom: 16px;
     }
     .ig-modal-close {
       background: none;
       border: none;
-      color: #94a3b8;
+      color: #64748B;
       font-size: 20px;
       cursor: pointer;
       line-height: 1;
       padding: 4px;
     }
     .ig-modal-close:hover {
-      color: #f8fafc;
+      color: #101D35;
     }
     .ig-modal-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #064e3b;
-      color: #6ee7b7;
+      background: #ECFDF5;
+      color: #0E9B6C;
+      border: 1px solid rgba(18, 185, 129, 0.3);
       padding: 3px 8px;
       border-radius: 9999px;
       font-size: 11px;
@@ -133,20 +134,20 @@
       margin-bottom: 8px;
     }
     .ig-modal-row span:first-child {
-      color: #94a3b8;
+      color: #64748B;
     }
     .ig-modal-row span:last-child {
-      color: #f1f5f9;
+      color: #101D35;
       font-weight: 600;
     }
     .ig-guarantee-box {
-      background: #1e293b;
-      border-left: 3px solid #38bdf8;
+      background: #F3F6FB;
+      border-left: 3px solid #176BEB;
       padding: 10px 12px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 11px;
-      color: #cbd5e1;
-      line-height: 1.4;
+      color: #334155;
+      line-height: 1.45;
       margin: 16px 0;
     }
     @keyframes ig-fade-in {
@@ -164,7 +165,7 @@
   }
 
   function getShieldSvg() {
-    return '<svg class="ig-seal-icon" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    return '<svg class="ig-seal-icon" viewBox="0 0 24 24" fill="none" stroke="#176BEB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' +
       '<path d="m9 12 2 2 4-4"/>' +
       '</svg>';
@@ -187,8 +188,8 @@
           '<div style="display:flex;align-items:center;gap:8px;">',
             getShieldSvg(),
             '<div>',
-              '<div style="font-weight:bold;font-size:14px;color:#f8fafc;">IntentGuard Certified Merchant</div>',
-              '<div style="font-size:11px;color:#94a3b8;">Cryptographically Enforced E-Commerce</div>',
+              '<div style="font-weight:bold;font-size:14px;color:#101D35;">IntentGuard Certified Merchant</div>',
+              '<div style="font-size:11px;color:#64748B;">Cryptographically Enforced E-Commerce</div>',
             '</div>',
           '</div>',
           '<button class="ig-modal-close" id="ig-close-btn">&times;</button>',
@@ -202,11 +203,11 @@
         '</div>',
         '<div class="ig-modal-row">',
           '<span>Merchant ID:</span>',
-          '<span style="font-family:monospace;color:#38bdf8;">' + (merchant.intentguard_id || 'IG-MCH-APEX0001') + '</span>',
+          '<span style="font-family:monospace;color:#176BEB;">' + (merchant.intentguard_id || 'IG-MCH-APEX0001') + '</span>',
         '</div>',
         '<div class="ig-modal-row">',
           '<span>Compliance Score:</span>',
-          '<span style="color:#34d399;">' + (merchant.compliance_score ? Number(merchant.compliance_score).toFixed(1) : '96.5') + ' / 100.0</span>',
+          '<span style="color:#0E9B6C;">' + (merchant.compliance_score ? Number(merchant.compliance_score).toFixed(1) : '96.5') + ' / 100.0</span>',
         '</div>',
         '<div class="ig-modal-row">',
           '<span>Active Agreement:</span>',
@@ -216,7 +217,7 @@
           '<strong>IntentGuard Purchase Integrity Guarantee:</strong><br/>',
           'This merchant has legally agreed to IntentGuard Automated Payment Capture Interception. What you confirm at checkout strictly matches what gets charged, or payment capture is automatically held.',
         '</div>',
-        '<div style="text-align:center;font-size:10px;color:#64748b;margin-top:10px;">',
+        '<div style="text-align:center;font-size:10px;color:#64748B;margin-top:10px;">',
           'Powered by IntentGuard &bull; Cryptographic Provenance SHA-256',
         '</div>',
       '</div>'
