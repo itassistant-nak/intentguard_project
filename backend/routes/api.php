@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\MerchantController;
 use App\Http\Controllers\Api\V1\IntegrityVerificationController;
 use App\Http\Controllers\Api\V1\PurchaseEvidenceController;
 use App\Http\Controllers\Api\V1\PurchaseIntentController;
+use App\Http\Controllers\Api\V1\TransactionDecisionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,7 +56,13 @@ Route::prefix('v1')->group(function () {
         // Module F: Semantic Purchase Integrity Engine (SPIE)
         Route::post('/intents/{intentId}/verify', [IntegrityVerificationController::class, 'verify']);
         Route::get('/intents/{intentId}/verifications', [IntegrityVerificationController::class, 'index']);
+
+        // Module G: Transaction Decision Engine (TDE) & Pre-Capture Hold Resolution
+        Route::get('/verifications/pending-holds', [TransactionDecisionController::class, 'pendingHolds']);
         Route::get('/verifications/{id}', [IntegrityVerificationController::class, 'show']);
+        Route::post('/verifications/{id}/confirm', [TransactionDecisionController::class, 'confirm']);
+        Route::post('/verifications/{id}/reject', [TransactionDecisionController::class, 'reject']);
+        Route::get('/verifications/{id}/audit-log', [TransactionDecisionController::class, 'auditLog']);
     });
 });
 

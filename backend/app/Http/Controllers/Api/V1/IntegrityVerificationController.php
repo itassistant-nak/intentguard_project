@@ -22,6 +22,7 @@ class IntegrityVerificationController
 {
     public function __construct(
         private readonly SemanticIntegrityEngine $integrityEngine,
+        private readonly \App\Engines\TransactionDecisionEngine\TransactionDecisionEngine $decisionEngine = new \App\Engines\TransactionDecisionEngine\TransactionDecisionEngine(),
     ) {}
 
     /**
@@ -68,6 +69,11 @@ class IntegrityVerificationController
                 $intent->update(['status' => PurchaseIntentStatus::MISMATCHED]);
             } elseif ($intent->status === PurchaseIntentStatus::PENDING) {
                 $intent->update(['status' => PurchaseIntentStatus::CONFIRMED]);
+            }
+
+            // Log initial capture hold if placed
+            if ($report->holdPaymentCapture) {
+                $this->decisionEngine->recordInitialHold($record);
             }
 
             return $record;

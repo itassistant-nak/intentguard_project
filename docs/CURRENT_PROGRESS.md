@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, **Module F — Semantic Purchase Integrity Engine (SPIE)**  
-> **Next Active Module:** Module G — Transaction Decision Engine (TDE)  
+> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, **Module G — Transaction Decision Engine (TDE)**  
+> **Next Active Module:** Module H — Merchant Compliance & Accountability  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, **Module F: SPIE (Completed)** |
-| **Database Status** | 11 Migrations executed (`+ verification_decisions`) |
-| **Automated Tests** | **61 tests passing, 272 assertions, 100% pass rate** (`php artisan test`) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, **Module G: TDE (Completed)** |
+| **Database Status** | 12 Migrations executed (`+ decision_resolution_audit_logs`) |
+| **Automated Tests** | **77 tests passing, 317 assertions, 100% pass rate** (`php artisan test`) |
 | **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module G: Transaction Decision Engine (TDE) & Payment Capture Policy |
+| **Next Milestone** | Module H: Merchant Compliance & Accountability Telemetry |
 
 ---
 
@@ -119,6 +119,30 @@
   - `GET /api/v1/verifications/{id}`: Detailed decision and discrepancy inspection.
 - [x] **Frontend:** `types/verification.ts`, `services/verificationService.ts`.
 
+#### Module G: Transaction Decision Engine (TDE)
+- [x] **Database Migration & Models:**
+  - Added `resolution_status`, `resolved_at`, and `resolved_by` to `verification_decisions`.
+  - Created `decision_resolution_audit_logs` table (append-only: `verification_decision_id`, `action`, `actor_type`, `actor_id`, `reason`, `metadata_json`, `created_at`).
+  - `DecisionResolutionAuditLog` model with enum casts (`ResolutionAuditAction`, `ResolutionActorType`).
+  - Added resolution audit history and resolver relations on `VerificationDecision`.
+- [x] **Domain Engine & Enums:**
+  - `DecisionResolutionStatus` enum (`unresolved`, `customer_confirmed`, `customer_rejected`, `hold_expired`).
+  - `ResolutionAuditAction` enum (`hold_placed`, `customer_confirmed`, `customer_rejected`, `capture_released`, `capture_voided`, `hold_expired`).
+  - `ResolutionActorType` enum (`customer`, `system`, `admin`, `merchant`).
+  - `CaptureAction` enum (`capture_immediate`, `capture_hold`, `capture_void`).
+  - `TransactionDecisionEngine`:
+    * Determines gateway capture directives with merchant compliance escalation (< 70.00 score triggers hold).
+    * `recordInitialHold`: Records system audit trail upon initial hold placement.
+    * `resolveCustomerConfirmation`: Releases payment capture hold, updates intent to confirmed, logs audit trail (`customer_confirmed`, `capture_released`).
+    * `resolveCustomerRejection`: Voids payment capture, updates intent to mismatched, logs audit trail (`customer_rejected`, `capture_voided`).
+    * State machine guards against resolving non-held or already resolved decisions.
+- [x] **API Endpoints & Validation:**
+  - `POST /api/v1/verifications/{id}/confirm` (`ConfirmResolutionRequest`): Customer 1-click confirmation releasing capture hold.
+  - `POST /api/v1/verifications/{id}/reject` (`RejectResolutionRequest`): Customer rejection voiding capture.
+  - `GET /api/v1/verifications/{id}/audit-log`: Retrieves append-only resolution history.
+  - `GET /api/v1/verifications/pending-holds`: Lists decisions currently on capture hold awaiting customer confirmation.
+- [x] **Frontend:** Updated `types/verification.ts` and `services/verificationService.ts` (`confirmResolution`, `rejectResolution`, `getResolutionAuditLogs`, `listPendingHolds`).
+
 ---
 
 ## 3. Database Migration Status
@@ -136,6 +160,7 @@
 | `2026_11_10_000005_create_purchase_intents_table.php` | `purchase_intents` | Applied |
 | `2026_11_10_000006_create_purchase_evidence_table.php` | `purchase_evidence` | Applied |
 | `2026_11_10_000007_create_verification_decisions_table.php` | `verification_decisions` | Applied |
+| `2026_11_10_000008_create_decision_resolution_audit_logs_table.php` | `decision_resolution_audit_logs` | Applied |
 
 ---
 
@@ -231,22 +256,43 @@ Semantic Integrity Engine (Tests\Unit\SemanticIntegrityEngine)
  ✔ Critical failure yields 0 confidence and mismatch verdict
  ✔ Untolerated warning triggers confirmation verdict
 
-OK (61 tests, 272 assertions) — 100% Passed (Duration: ~690ms)
+Transaction Decision (Tests\Feature\TransactionDecision)
+ ✔ Customer can confirm pending hold decision
+ ✔ Customer can reject pending hold decision
+ ✔ Confirming already resolved decision returns 422
+ ✔ Rejection requires mandatory reason
+ ✔ Can view resolution audit logs
+ ✔ Can list pending holds for customer
+ ✔ Customer cannot confirm another customers decision
+ ✔ Unauthenticated resolution is rejected
+
+Transaction Decision Engine (Tests\Unit\TransactionDecisionEngine)
+ ✔ Clean match determines immediate capture
+ ✔ Mismatch determines void capture
+ ✔ Uncertain determines hold capture
+ ✔ Require confirmation determines hold capture
+ ✔ Low compliance score merchant escalates match to hold
+ ✔ Resolve customer confirmation releases hold and updates status
+ ✔ Resolve customer rejection voids capture and updates status
+ ✔ Resolving already resolved decision throws exception
+
+OK (77 tests, 317 assertions) — 100% Passed (Duration: ~820ms)
 ```
 
 Frontend build test:
 ```
-next build (Turbopack) — Compiled successfully in 275ms. 0 errors.
+next build (Turbopack) — Compiled successfully in 277ms. 0 errors.
 ```
 
 ---
 
 ## 5. Next Development Tasks
 
-1. **Module G: Transaction Decision Engine (TDE):**
-   - Fine-tune capture hold policy and pre-capture enforcement rules.
-   - Implement customer confirmation resolution workflow (`POST /api/v1/verifications/{id}/confirm` and `/reject`).
-   - Transaction state transitions and webhook trigger notifications.
-2. **Module H: Merchant Compliance & Accountability:**
-   - Automated compliance scoring deduction algorithms.
-   - Merchant dispute adjudication and compliance event logging.
+1. **Module H: Merchant Compliance & Accountability Telemetry:**
+   - Compliance event types (`mismatch_confirmed`, `delivery_delayed`, `chargeback_received`, `dispute_filed`).
+   - Dynamic 100-point compliance scoring algorithm with score degradation and recovery curves.
+   - Merchant dispute adjudication workflow and contractual penalties.
+2. **Module I: PayPal Gateway Integration:**
+   - PayPal Orders v2 & Payments v2 client (`intent: AUTHORIZE`).
+   - Pre-capture interception using TDE verdicts (`CAPTURE_IMMEDIATE`, `CAPTURE_HOLD`, `CAPTURE_VOID`).
+   - PayPal Webhook verification and idempotency protection.
