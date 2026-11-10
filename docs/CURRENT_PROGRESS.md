@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, Module G, **Module H — Merchant Compliance & Accountability Telemetry**  
-> **Next Active Module:** Module I — PayPal Gateway Integration (Pre-Capture Authorization & Capture)  
+> **Completed Modules:** Module A, Module B, Module C, Module D, Module E, Module F, Module G, Module H, **Module I — PayPal Gateway Integration (Completed)**  
+> **Next Active Module:** Module J — System-Wide Audit, Provenance & Administrative Reporting  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, Module G: TDE, **Module H: Compliance Telemetry (Completed)** |
-| **Database Status** | 14 Migrations executed (`+ merchant_compliance_events`, `customer_disputes`) |
-| **Automated Tests** | **94 tests passing, 368 assertions, 100% pass rate** (`php artisan test`) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, Module E: Evidence, Module F: SPIE, Module G: TDE, Module H: Compliance, **Module I: PayPal Integration (Completed)** |
+| **Database Status** | 16 Migrations executed (`+ payment_authorizations`, `webhook_events`) |
+| **Automated Tests** | **117 tests passing, 441 assertions, 100% pass rate** (`php artisan test`) |
 | **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module I: PayPal Gateway Integration (Orders v2 & Payments v2 Authorization & Capture) |
+| **Next Milestone** | Module J: System-Wide Audit, Provenance & Administrative Reporting |
 
 ---
 
@@ -177,6 +177,43 @@
   - `POST /api/v1/disputes/{id}/resolve` (`ResolveDisputeRequest`): Admin formal resolution.
 - [x] **Frontend:** `types/compliance.ts` and `services/complianceService.ts`.
 
+#### Module I: PayPal Gateway Integration (Orders v2 & Payments v2)
+- [x] **Database Relational Migrations:**
+  - `payment_authorizations` table: Tracking two-step authorization (`gateway`, `order_id`, `authorization_id`, `capture_id`, `amount_cents`, `currency`, `status`, `idempotency_key`, `customer_payer_id`, `authorized_at`, `captured_at`, `voided_at`).
+  - `webhook_events` table: Gateway webhook event store with cryptographic signature verification flag and idempotency replay deduplication.
+- [x] **Domain Models & Enums:**
+  - `PaymentAuthorization` model with `PaymentAuthorizationStatus` enum (`created`, `authorized`, `captured`, `voided`, `held`).
+  - `WebhookEvent` model with `WebhookEventStatus` enum (`received`, `processed`, `failed`, `ignored`).
+  - Linked `paymentAuthorizations()` and `latestPaymentAuthorization()` relationships to `PurchaseIntent`.
+  - Added factories: `PaymentAuthorizationFactory`, `WebhookEventFactory`.
+- [x] **PayPal Client & Domain Services:**
+  - `PayPalClient`: Server-to-server HTTP client using `Illuminate\Support\Facades\Http`:
+    * OAuth2 token retrieval with automatic memory caching and expiration buffer.
+    * Orders v2 creation (`POST /v2/checkout/orders`) with `intent="AUTHORIZE"`.
+    * Orders v2 authorization (`POST /v2/checkout/orders/{id}/authorize`).
+    * Payments v2 capture (`POST /v2/payments/authorizations/{id}/capture`).
+    * Payments v2 void (`POST /v2/payments/authorizations/{id}/void`).
+    * Webhook transmission signature verification (`/v1/notifications/verify-webhook-signature`).
+  - `PayPalGatewayService`:
+    * `createOrderForIntent`: Generates PayPal order with strict idempotency protection.
+    * `processAuthorization`: Executes payment authorization, runs SPIE + TDE, and intercepts capture:
+      - Clean `MATCH`: Executes immediate capture, updates status to `captured`.
+      - `CAPTURE_HOLD` (`REQUIRE_CUSTOMER_CONFIRMATION` / `UNCERTAIN`): Holds payment uncaptured, records audit hold.
+      - Severe `MISMATCH`: Executes immediate void on PayPal, updates intent to `mismatched`.
+    * `executeHeldCapture`: Releases capture hold on PayPal upon verified customer confirmation.
+    * `executeHeldVoid`: Voids authorized payment upon customer rejection.
+  - `PayPalWebhookService`:
+    * Webhook signature verification and replay attack prevention (deduplication by `event_id`).
+    * State machine synchronization (`PAYMENT.AUTHORIZATION.CREATED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.AUTHORIZATION.VOIDED`).
+- [x] **REST API Endpoints & Form Requests:**
+  - `POST /api/v1/intents/{id}/paypal/order` (`CreatePayPalOrderRequest`): Initialize order with idempotency key.
+  - `POST /api/v1/intents/{id}/paypal/authorize` (`AuthorizePayPalOrderRequest`): Authorize and evaluate with TDE interception.
+  - `GET /api/v1/payments/{id}` (`PaymentAuthorizationResource`): Detailed payment inspection.
+  - `POST /api/v1/payments/{id}/capture-held` (`CaptureHeldPaymentRequest`): Customer release of held funds.
+  - `POST /api/v1/payments/{id}/void-held` (`VoidHeldPaymentRequest`): Customer rejection voiding funds.
+  - `POST /api/v1/webhooks/paypal`: Cryptographically verified webhook ingestion.
+- [x] **Frontend:** `types/payment.ts` and `services/paymentService.ts`.
+
 ---
 
 ## 3. Database Migration Status
@@ -197,6 +234,8 @@
 | `2026_11_10_000008_create_decision_resolution_audit_logs_table.php` | `decision_resolution_audit_logs` | Applied |
 | `2026_11_10_000009_create_merchant_compliance_events_table.php` | `merchant_compliance_events` | Applied |
 | `2026_11_10_000010_create_customer_disputes_table.php` | `customer_disputes` | Applied |
+| `2026_11_10_000011_create_payment_authorizations_table.php` | `payment_authorizations` | Applied |
+| `2026_11_10_000012_create_webhook_events_table.php` | `webhook_events` | Applied |
 
 ---
 
@@ -275,6 +314,37 @@ Merchant Registration (Tests\Feature\MerchantRegistration)
  ✔ Registration fails on duplicate email or registration number
  ✔ Can retrieve merchant by intentguard id or id
 
+Pay Pal Client (Tests\Unit\PayPalClient)
+ ✔ Get access token retrieves and caches token
+ ✔ Create order sends authorize intent
+ ✔ Authorize order calls paypal authorize endpoint
+ ✔ Capture authorization calls capture endpoint
+ ✔ Void authorization calls void endpoint
+ ✔ Verify webhook signature validates headers
+
+Pay Pal Gateway Service (Tests\Unit\PayPalGatewayService)
+ ✔ Create order for intent creates payment authorization
+ ✔ Process authorization clean match captures immediately
+ ✔ Process authorization mismatch voids authorization
+ ✔ Process authorization discrepancy holds authorization
+ ✔ Execute held capture captures held authorization
+ ✔ Execute held void voids held authorization
+
+Pay Pal Payment (Tests\Feature\PayPalPayment)
+ ✔ Customer can create paypal order for their intent
+ ✔ Customer cannot create order for another customers intent
+ ✔ Customer can authorize order and triggers interception
+ ✔ Customer can view payment authorization
+ ✔ Customer can release held capture
+ ✔ Customer can void held capture
+ ✔ Unauthenticated requests are rejected
+
+Pay Pal Webhook (Tests\Feature\PayPalWebhook)
+ ✔ Webhook with valid signature is processed
+ ✔ Webhook with invalid signature is rejected
+ ✔ Duplicate webhook is deduplicated
+ ✔ Capture completed webhook synchronizes payment authorization
+
 Purchase Evidence (Tests\Feature\PurchaseEvidence)
  ✔ Customer can record inline evidence for intent
  ✔ Customer can record blob reference evidence
@@ -335,23 +405,23 @@ Transaction Decision Engine (Tests\Unit\TransactionDecisionEngine)
  ✔ Resolve customer rejection voids capture and updates status
  ✔ Resolving already resolved decision throws exception
 
-OK (94 tests, 368 assertions) — 100% Passed (Duration: ~1.01s)
+OK (117 tests, 441 assertions) — 100% Passed (Duration: ~1.38s)
 ```
 
 Frontend build test:
 ```
-next build (Turbopack) — Compiled successfully in 358ms. Finished TypeScript in 992ms. 0 errors.
+next build (Turbopack) — Compiled successfully in 288ms. Finished TypeScript in 1076ms. 0 errors.
 ```
 
 ---
 
 ## 5. Next Development Tasks
 
-1. **Module I: PayPal Gateway Integration (Orders v2 & Payments v2):**
-   - PayPal Orders v2 client with two-step authorization (`intent: AUTHORIZE`).
-   - Pre-capture interception using TDE verdicts (`CAPTURE_IMMEDIATE`, `CAPTURE_HOLD`, `CAPTURE_VOID`).
-   - Capture hold management and webhook signature verification (`PAYMENT.AUTHORIZATION.CREATED`, `CHECKOUT.ORDER.APPROVED`).
-   - Idempotency key protection and replay prevention.
-2. **Module J: Audit, Provenance & Administrative Reporting:**
-   - Cryptographic tamper-evident audit trails.
-   - Comprehensive compliance reporting and merchant analytics.
+1. **Module J: System-Wide Audit, Provenance & Administrative Reporting:**
+   - Centralized immutable audit trails across all state mutations (intents, decisions, compliance, payments).
+   - Administrative reporting console: fraud interception statistics, merchant compliance trends, and transaction provenance inspection.
+   - Zero-trust API validation hardening, rate limiting, and HMAC signature protection for external partner webhooks.
+2. **Phase 10: Frontend User Interfaces (Next.js):**
+   - Customer Portal: purchase intent creation, interactive mismatch warnings, one-click confirmation for held transactions.
+   - Merchant Portal: registration, cryptographic agreement signing modal, fulfilment telemetry, and dispute response.
+   - Administrator Console: merchant vetting queue, transaction integrity monitor, audit log explorer.

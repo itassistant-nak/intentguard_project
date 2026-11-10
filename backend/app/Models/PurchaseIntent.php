@@ -100,6 +100,22 @@ class PurchaseIntent extends Model
         return $this->hasOne(VerificationDecision::class)->latestOfMany('decided_at');
     }
 
+    /**
+     * Payment authorizations associated with this intent.
+     */
+    public function paymentAuthorizations(): HasMany
+    {
+        return $this->hasMany(PaymentAuthorization::class)->latest();
+    }
+
+    /**
+     * Most recent payment authorization.
+     */
+    public function latestPaymentAuthorization(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PaymentAuthorization::class)->latestOfMany();
+    }
+
     // -------------------------------------------------------------------------
     // Business logic helpers
     // -------------------------------------------------------------------------

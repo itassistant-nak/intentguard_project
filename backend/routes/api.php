@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\IntegrityVerificationController;
 use App\Http\Controllers\Api\V1\PurchaseEvidenceController;
 use App\Http\Controllers\Api\V1\CustomerDisputeController;
 use App\Http\Controllers\Api\V1\MerchantComplianceController;
+use App\Http\Controllers\Api\V1\PayPalPaymentController;
+use App\Http\Controllers\Api\V1\PayPalWebhookController;
 use App\Http\Controllers\Api\V1\PurchaseIntentController;
 use App\Http\Controllers\Api\V1\TransactionDecisionController;
 use Illuminate\Support\Facades\Route;
@@ -77,6 +79,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/disputes/{id}', [CustomerDisputeController::class, 'show']);
         Route::post('/disputes/{id}/respond', [CustomerDisputeController::class, 'respond']);
         Route::post('/disputes/{id}/resolve', [CustomerDisputeController::class, 'resolve']);
+
+        // Module I: PayPal Gateway Integration (Orders v2 & Payments v2)
+        Route::post('/intents/{intentId}/paypal/order', [PayPalPaymentController::class, 'createOrder']);
+        Route::post('/intents/{intentId}/paypal/authorize', [PayPalPaymentController::class, 'authorizeOrder']);
+        Route::get('/payments/{id}', [PayPalPaymentController::class, 'show']);
+        Route::post('/payments/{id}/capture-held', [PayPalPaymentController::class, 'captureHeld']);
+        Route::post('/payments/{id}/void-held', [PayPalPaymentController::class, 'voidHeld']);
     });
+
+    // Inbound Webhook Ingestion (Unauthenticated, verified via cryptographic digital signatures)
+    Route::post('/webhooks/paypal', [PayPalWebhookController::class, 'handle']);
 });
 
