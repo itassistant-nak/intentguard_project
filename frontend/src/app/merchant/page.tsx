@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { authService, User } from '@/services/authService';
+import { ApiError } from '@/services/apiClient';
 import { merchantService } from '@/services/merchantService';
 import { agreementService } from '@/services/agreementService';
 import { complianceService } from '@/services/complianceService';
@@ -12,6 +14,7 @@ import type { MerchantAgreement } from '@/types/agreement';
 import type { CustomerDispute, MerchantComplianceEvent } from '@/types/compliance';
 
 export default function MerchantPortalPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [merchantIdInput, setMerchantIdInput] = useState('IG-MCH-APEX0001');
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,6 +41,8 @@ export default function MerchantPortalPage() {
   const [submittingAppeal, setSubmittingAppeal] = useState(false);
 
   useEffect(() => {
+    const currentUser = authService.getUser();
+    setUser(currentUser);
     loadMerchant('IG-MCH-APEX0001');
     loadActiveAgreement();
   }, []);
@@ -47,7 +52,7 @@ export default function MerchantPortalPage() {
       const res = await agreementService.getActive();
       if (res.data) setActiveAgreement(res.data);
     } catch (err) {
-      console.error(err);
+      console.warn('Could not load active agreement:', err);
     }
   };
 
@@ -59,10 +64,12 @@ export default function MerchantPortalPage() {
       const res = await merchantService.getByIdentifier(id.trim());
       if (res.data) {
         setMerchant(res.data);
-        await Promise.all([
-          loadComplianceEvents(res.data.id),
-          loadDisputes(res.data.id),
-        ]);
+        if (authService.isAuthenticated()) {
+          await Promise.all([
+            loadComplianceEvents(res.data.id),
+            loadDisputes(res.data.id),
+          ]);
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Merchant not found.');
@@ -73,21 +80,55 @@ export default function MerchantPortalPage() {
   };
 
   const loadComplianceEvents = async (mId: number) => {
+    if (!authService.isAuthenticated()) return;
     try {
       const events = await complianceService.listComplianceEvents(mId);
       setComplianceEvents(events || []);
     } catch (err) {
-      console.error(err);
+      if (err instanceof ApiError && err.status === 401) {
+        setUser(null);
+      } else {
+        console.warn('Could not load compliance events:', err);
+      }
     }
   };
 
   const loadDisputes = async (mId: number) => {
+    if (!authService.isAuthenticated()) return;
     try {
       const res = await complianceService.listDisputes({ merchant_id: mId });
       setDisputes(res || []);
     } catch (err) {
-      console.error(err);
+      if (err instanceof ApiError && err.status === 401) {
+        setUser(null);
+      } else {
+        console.warn('Could not load disputes:', err);
+      }
     }
+  };
+
+  const handleQuickLogin = async () => {
+    try {
+      const res = await authService.login('merchant@apexelectronics.co.nz', 'MerchantPass!2026');
+      if (res.data?.user) {
+        setUser(res.data.user);
+        if (merchant) {
+          await Promise.all([
+            loadComplianceEvents(merchant.id),
+            loadDisputes(merchant.id),
+          ]);
+        }
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Merchant demo login failed.');
+    }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+    setComplianceEvents([]);
+    setDisputes([]);
   };
 
   const handleRespondDispute = async (e: React.FormEvent) => {
@@ -150,22 +191,48 @@ export default function MerchantPortalPage() {
             </p>
           </div>
 
-          {/* Quick Lookup Form */}
-          <div className="bg-[#172641] p-4 rounded-xl border border-slate-700/60 flex items-center gap-2 shadow-sm">
-            <input
-              type="text"
-              value={merchantIdInput}
-              onChange={(e) => setMerchantIdInput(e.target.value)}
-              placeholder="Enter IntentGuard ID..."
-              className="px-3 py-1.5 text-xs bg-[#101D35] border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-[#176BEB] focus:outline-none"
-            />
-            <button
-              onClick={() => loadMerchant(merchantIdInput)}
-              disabled={loading}
-              className="px-3.5 py-1.5 bg-[#176BEB] hover:bg-blue-600 text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Searching...' : 'Lookup Merchant'}
-            </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* User Session Status */}
+            {user ? (
+              <div className="bg-[#172641] px-3.5 py-2 rounded-xl border border-slate-700/60 flex items-center justify-between gap-3 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold">Signed In</span>
+                  <span className="font-semibold text-white">{user.name}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-600 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleQuickLogin}
+                className="px-3.5 py-2 bg-[#12B981] hover:bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-sm whitespace-nowrap transition-colors flex items-center gap-1.5 justify-center"
+              >
+                <span>⚡</span>
+                <span>Demo Merchant Sign-In</span>
+              </button>
+            )}
+
+            {/* Quick Lookup Form */}
+            <div className="bg-[#172641] p-3 rounded-xl border border-slate-700/60 flex items-center gap-2 shadow-sm">
+              <input
+                type="text"
+                value={merchantIdInput}
+                onChange={(e) => setMerchantIdInput(e.target.value)}
+                placeholder="Enter IntentGuard ID..."
+                className="px-3 py-1.5 text-xs bg-[#101D35] border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-[#176BEB] focus:outline-none"
+              />
+              <button
+                onClick={() => loadMerchant(merchantIdInput)}
+                disabled={loading}
+                className="px-3.5 py-1.5 bg-[#176BEB] hover:bg-blue-600 text-white text-xs font-bold rounded-lg shadow-sm whitespace-nowrap disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Searching...' : 'Lookup'}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -369,15 +436,35 @@ export default function MerchantPortalPage() {
                     <h3 className="font-bold text-[#101D35] text-base">Fulfilment Compliance History</h3>
                     <p className="text-xs text-slate-500">Live score telemetry events recorded by IntentGuard engines.</p>
                   </div>
-                  <button
-                    onClick={() => merchant && loadComplianceEvents(merchant.id)}
-                    className="text-xs text-[#176BEB] hover:text-blue-700 font-semibold"
-                  >
-                    🔄 Refresh
-                  </button>
+                  {user && (
+                    <button
+                      onClick={() => merchant && loadComplianceEvents(merchant.id)}
+                      className="text-xs text-[#176BEB] hover:text-blue-700 font-semibold"
+                    >
+                      🔄 Refresh
+                    </button>
+                  )}
                 </div>
 
-                {complianceEvents.length === 0 ? (
+                {!user ? (
+                  <div className="py-12 px-4 text-center max-w-md mx-auto space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-[#176BEB]/10 text-[#176BEB] flex items-center justify-center mx-auto text-xl">
+                      🔒
+                    </div>
+                    <h4 className="font-bold text-[#101D35] text-sm">Merchant Authentication Required</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Fulfilment telemetry and score deductions are protected by IntentGuard role-based access control. Sign in with your merchant credentials to inspect internal records.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        onClick={handleQuickLogin}
+                        className="px-4 py-2 bg-[#176BEB] hover:bg-blue-600 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                      >
+                        ⚡ Sign In as Apex Electronics (Demo)
+                      </button>
+                    </div>
+                  </div>
+                ) : complianceEvents.length === 0 ? (
                   <div className="p-12 text-center text-xs text-slate-500">
                     No compliance deductions or telemetry events recorded. Score is in pristine standing!
                   </div>
@@ -453,15 +540,35 @@ export default function MerchantPortalPage() {
                     <h3 className="font-bold text-[#101D35] text-base">Customer Disputes Inbox</h3>
                     <p className="text-xs text-slate-500">Formal complaints submitted by customers regarding item integrity.</p>
                   </div>
-                  <button
-                    onClick={() => merchant && loadDisputes(merchant.id)}
-                    className="text-xs text-[#176BEB] hover:text-blue-700 font-semibold"
-                  >
-                    🔄 Refresh
-                  </button>
+                  {user && (
+                    <button
+                      onClick={() => merchant && loadDisputes(merchant.id)}
+                      className="text-xs text-[#176BEB] hover:text-blue-700 font-semibold"
+                    >
+                      🔄 Refresh
+                    </button>
+                  )}
                 </div>
 
-                {disputes.length === 0 ? (
+                {!user ? (
+                  <div className="py-12 px-4 text-center max-w-md mx-auto space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-[#176BEB]/10 text-[#176BEB] flex items-center justify-center mx-auto text-xl">
+                      ⚖️
+                    </div>
+                    <h4 className="font-bold text-[#101D35] text-sm">Merchant Authentication Required</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Customer disputes and resolution workflows contain buyer claims and financial settlements. Sign in with your merchant credentials to respond.
+                    </p>
+                    <div className="pt-2">
+                      <button
+                        onClick={handleQuickLogin}
+                        className="px-4 py-2 bg-[#176BEB] hover:bg-blue-600 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
+                      >
+                        ⚡ Sign In as Apex Electronics (Demo)
+                      </button>
+                    </div>
+                  </div>
+                ) : disputes.length === 0 ? (
                   <div className="p-12 text-center text-xs text-slate-500">
                     No active disputes filed against this merchant.
                   </div>

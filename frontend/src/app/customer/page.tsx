@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { authService, User } from '@/services/authService';
+import { ApiError } from '@/services/apiClient';
 import {
   listIntents,
   recordIntent,
@@ -89,7 +90,11 @@ export default function CustomerPortalPage() {
         fillSimulatorFromIntent(res.data[0]);
       }
     } catch (err) {
-      console.error(err);
+      if (err instanceof ApiError && err.status === 401) {
+        setUser(null);
+      } else {
+        console.warn('Could not load intents:', err);
+      }
     } finally {
       setLoadingIntents(false);
     }
@@ -101,7 +106,11 @@ export default function CustomerPortalPage() {
       const res = await listPendingHolds();
       setPendingHolds(res.data || []);
     } catch (err) {
-      console.error(err);
+      if (err instanceof ApiError && err.status === 401) {
+        setUser(null);
+      } else {
+        console.warn('Could not load holds:', err);
+      }
     } finally {
       setLoadingHolds(false);
     }

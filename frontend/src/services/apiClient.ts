@@ -11,6 +11,20 @@ export interface ApiResponse<T> {
   };
 }
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  details?: Record<string, string[]>;
+
+  constructor(message: string, status: number, code?: string, details?: Record<string, string[]>) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -37,8 +51,15 @@ export async function apiRequest<T>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      data.error?.message || data.message || `API error (${response.status})`
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('intentguard_auth_token');
+      localStorage.removeItem('intentguard_auth_user');
+    }
+    throw new ApiError(
+      data.error?.message || data.message || `API error (${response.status})`,
+      response.status,
+      data.error?.code,
+      data.error?.details
     );
   }
 

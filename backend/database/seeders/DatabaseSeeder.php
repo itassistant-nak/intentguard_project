@@ -35,6 +35,15 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        User::firstOrCreate(
+            ['email' => 'merchant@apexelectronics.co.nz'],
+            [
+                'name' => 'Sarah Jenkins (Apex Electronics)',
+                'password' => bcrypt('MerchantPass!2026'),
+                'role' => 'merchant',
+            ],
+        );
+
         $this->call([
             MerchantAgreementSeeder::class,
         ]);
