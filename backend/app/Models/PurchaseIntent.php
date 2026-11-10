@@ -9,6 +9,7 @@ use Database\Factories\PurchaseIntentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseIntent extends Model
 {
@@ -73,6 +74,14 @@ class PurchaseIntent extends Model
     public function merchant(): BelongsTo
     {
         return $this->belongsTo(Merchant::class);
+    }
+
+    /**
+     * Evidence records forming the provenance chain for this intent.
+     */
+    public function evidence(): HasMany
+    {
+        return $this->hasMany(PurchaseEvidence::class)->orderBy('captured_at');
     }
 
     // -------------------------------------------------------------------------

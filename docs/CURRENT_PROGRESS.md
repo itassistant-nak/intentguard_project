@@ -2,8 +2,8 @@
 
 > **Current Status as of:** 2026-11-10  
 > **Active Framework:** Framework 01 — Project Foundation (Completed)  
-> **Completed Modules:** Module A, Module B, Module C, **Module D — Purchase Intent Management**  
-> **Next Active Module:** Module E — Evidence & Provenance  
+> **Completed Modules:** Module A, Module B, Module C, Module D, **Module E — Evidence & Provenance**  
+> **Next Active Module:** Module F — Semantic Purchase Integrity Engine (SPIE)  
 > **Last Updated By:** Lead Architect / Antigravity AI Assistant
 
 ---
@@ -13,12 +13,12 @@
 | Dimension | Current State |
 | :--- | :--- |
 | **Current Framework** | Framework 01: Project Foundation (Completed) |
-| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, **Module D: Purchase Intents (Completed)** |
-| **Database Status** | 9 Migrations executed (+ `purchase_intents`) |
-| **Automated Tests** | **26 tests passing, 138 assertions, 100% pass rate** (`php artisan test`) |
+| **Current Modules** | Module A: Auth, Module B: Merchants, Module C: Agreements, Module D: Intents, **Module E: Evidence (Completed)** |
+| **Database Status** | 10 Migrations executed (`+ purchase_intents, purchase_evidence`) |
+| **Automated Tests** | **38 tests passing, 194 assertions, 100% pass rate** (`php artisan test`) |
 | **Frontend Status** | Next.js 16 App Router, TypeScript, Tailwind CSS (`npm run build` passing) |
 | **Known Bugs** | None |
-| **Next Milestone** | Module E: Evidence & Provenance |
+| **Next Milestone** | Module F: Semantic Purchase Integrity Engine (SPIE) |
 
 ---
 
@@ -71,12 +71,35 @@
   - `POST /api/v1/merchants/{id}/agreements/accept` (`AcceptAgreementRequest`).
   - `GET /api/v1/merchants/{id}/agreements` (`MerchantAgreementAcceptanceResource`).
 
-#### Frontend User Interface (Module B & C)
-- [x] Interactive `MerchantRegistrationForm` with instant validation and platform selection.
-- [x] Interactive `MerchantAgreementModal` presenting the four core policies with cryptographic digest verification and digital execution form.
-- [x] `MerchantStatusBadge` with real-time status indicators.
-- [x] `MerchantLookupWidget` allowing instant public verification of merchant status and compliance score.
-- [x] Verified build output via `npm run build`.
+#### Module D: Purchase Intent Management
+- [x] **Database Migration & Model:**
+  - `purchase_intents` table with product identity, specification JSON, quantity, unit price in cents, currency, shipping conditions, substitution tolerances, and SHA-256 `intent_hash`.
+  - `PurchaseIntent` model with price decimal helpers, casts, and relationships to `User` and `Merchant`.
+- [x] **Domain Service & Enums:**
+  - `PurchaseIntentStatus` enum (`pending`, `confirmed`, `verified`, `mismatched`, `cancelled`, `expired`).
+  - `PurchaseIntentService`: Deterministic canonical payload hashing (SHA-256), `record`, `find`, `cancel`, `expireOverdue`, `verifyIntegrity`.
+- [x] **API Endpoints & Validation:**
+  - `POST /api/v1/intents` (`RecordPurchaseIntentRequest`).
+  - `GET /api/v1/intents` (Paginated user intents).
+  - `GET /api/v1/intents/{id}` (Lookup by ID or hash).
+  - `POST /api/v1/intents/{id}/cancel` (Customer intent cancellation).
+  - `GET /api/v1/intents/{id}/verify-integrity` (Cryptographic tamper check).
+- [x] **Frontend:** `types/intent.ts`, `services/intentService.ts`.
+
+#### Module E: Evidence & Provenance
+- [x] **Database Migration & Model:**
+  - `purchase_evidence` table: Immutable append-only audit log with `evidence_type`, `source_url`, `content_snapshot`, `content_snapshot_blob_path`, `content_hash` (SHA-256), and `metadata_json`.
+  - `PurchaseEvidence` model: `UPDATED_AT = null` (strictly append-only), `verifyContentIntegrity()` SHA-256 checker.
+- [x] **Domain Service & Enums:**
+  - `EvidenceType` enum (`product_page`, `checkout_screen`, `payment_quote`, `receipt`).
+  - `EvidenceService`: `record` (inline hashing), `recordBlobReference` (large payloads), `forIntent` (with type filter), `verifyIntegrity` (tamper detection), `buildProvenanceChain` (chain of custody summary).
+- [x] **API Endpoints & Validation:**
+  - `POST /api/v1/intents/{intentId}/evidence` (`RecordEvidenceRequest`).
+  - `GET /api/v1/intents/{intentId}/evidence` (Filterable list).
+  - `GET /api/v1/intents/{intentId}/evidence/provenance-chain` (Grouped provenance chain).
+  - `GET /api/v1/evidence/{id}` (Audit retrieval with content snapshot).
+  - `GET /api/v1/evidence/{id}/verify-integrity` (Per-record cryptographic check).
+- [x] **Frontend:** `types/evidence.ts`, `services/evidenceService.ts`.
 
 ---
 
@@ -92,6 +115,8 @@
 | `2026_11_10_000002_create_merchant_agreements_table.php` | `merchant_agreements` | Applied |
 | `2026_11_10_000003_create_merchant_agreement_acceptances_table.php` | `merchant_agreement_acceptances` | Applied |
 | `2026_11_10_000004_create_merchant_status_audit_logs_table.php` | `merchant_status_audit_logs` | Applied |
+| `2026_11_10_000005_create_purchase_intents_table.php` | `purchase_intents` | Applied |
+| `2026_11_10_000006_create_purchase_evidence_table.php` | `purchase_evidence` | Applied |
 
 ---
 
@@ -101,6 +126,12 @@ Ran via `php artisan test --testdox`:
 ```
 Runtime: PHP 8.4.26
 Configuration: phpunit.xml (SQLite in-memory)
+
+Authentication (Tests\Feature\Authentication)
+ ✔ User can login with valid credentials
+ ✔ Login fails with invalid credentials
+ ✔ Unauthenticated request returns 401 json instead of missing route exception
+ ✔ Authenticated user can access profile and logout
 
 Example (Tests\Feature\Example)
  ✔ The application returns a successful response
@@ -124,24 +155,48 @@ Merchant Registration (Tests\Feature\MerchantRegistration)
  ✔ Registration fails on duplicate email or registration number
  ✔ Can retrieve merchant by intentguard id or id
 
-OK (12 tests, 69 assertions) — 100% Passed (Duration: 350ms)
+Purchase Evidence (Tests\Feature\PurchaseEvidence)
+ ✔ Customer can record inline evidence for intent
+ ✔ Customer can record blob reference evidence
+ ✔ Recording fails when neither content nor blob path provided
+ ✔ Recording fails for invalid evidence type
+ ✔ Customer cannot record evidence for another customers intent
+ ✔ Can list evidence for intent
+ ✔ Can filter evidence by type
+ ✔ Can show single evidence record including raw content
+ ✔ Can retrieve provenance chain for intent
+ ✔ Evidence integrity verification passes for intact record
+ ✔ Evidence integrity verification fails when tampered
+ ✔ Unauthenticated evidence requests are rejected
+
+Purchase Intent (Tests\Feature\PurchaseIntent)
+ ✔ Customer can record purchase intent
+ ✔ Recording intent fails without required fields
+ ✔ Can retrieve intent by id
+ ✔ Can retrieve intent by hash
+ ✔ Retrieving nonexistent intent returns 404
+ ✔ Customer can cancel pending intent
+ ✔ Cannot cancel already terminal intent
+ ✔ Integrity verification passes for unmodified intent
+ ✔ Unauthenticated access to intents is rejected
+ ✔ Price helpers return correct decimal values
+
+OK (38 tests, 194 assertions) — 100% Passed (Duration: ~540ms)
 ```
 
 Frontend build test:
 ```
-next build (Turbopack) — Compiled successfully in 816ms. 0 errors.
+next build (Turbopack) — Compiled successfully in 311ms. 0 errors.
 ```
 
 ---
 
 ## 5. Next Development Tasks
 
-1. **Module D: Purchase Intent Management:**
-   - Migrate `purchase_intents` table (product identity, specification JSON, quantity, unit price, currency, merchant ID, shipping conditions, customer-approved substitution tolerances, cryptographic intent hash).
-   - Implement `PurchaseIntent` model, `PurchaseIntentService`, and Form Requests.
-   - Build `POST /api/v1/intents` and `GET /api/v1/intents/{id}` endpoints.
-2. **Module E: Evidence & Provenance:**
-   - Record immutable product page snapshots and checkout quotes with SHA-256 digests.
-3. **Module F: Semantic Purchase Integrity Engine:**
-   - Implement deterministic comparisons (prices, fees, quantities, SKUs).
-   - Implement semantic attribute evaluations (brand, model, condition, substitution boundaries).
+1. **Module F: Semantic Purchase Integrity Engine (SPIE):**
+   - Implement deterministic comparisons (exact price, currency, merchant ID, quantity, fee limits).
+   - Implement semantic attribute evaluations (brand, model, condition, specification matching, customer-allowed substitutions).
+   - Output structured discrepancy analysis report.
+2. **Module G: Transaction Decision Engine (TDE):**
+   - Output decision verdicts: `MATCH`, `MISMATCH`, `UNCERTAIN`, `REQUIRE_CUSTOMER_CONFIRMATION`.
+   - Implement capture hold and pre-capture enforcement.
