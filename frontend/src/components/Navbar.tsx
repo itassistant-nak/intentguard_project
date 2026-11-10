@@ -56,6 +56,7 @@ export function Navbar() {
     { href: '/customer', label: 'Customer Portal' },
     { href: '/merchant', label: 'Merchant Portal' },
     { href: '/admin', label: 'Admin Console' },
+    { href: '/seal-demo', label: 'Trust Seal Demo' },
   ];
 
   return (
